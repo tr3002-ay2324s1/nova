@@ -1,12 +1,13 @@
 import os
 
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, PollAnswerHandler
 from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 USERNAME = os.getenv("USERNAME")
+
 
 # Commands
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -15,8 +16,25 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("I am here to help you anytime!")
 
-async def custom_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("This is a custom command")
+async def onboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    questions = ["Meditating", "Running"]
+    message = await context.bot.send_poll(
+        update.effective_chat.id,
+        "What habit would you like to pick up?",
+        questions,
+        is_anonymous=False,
+        allows_multiple_answers=False,
+    )
+    # Save some info about the poll the bot_data for later use in receive_poll_answer
+    payload = {
+        message.poll.id: {
+            "questions": questions,
+            "message_id": message.message_id,
+            "chat_id": update.effective_chat.id,
+            "answers": 0,
+        }
+    }
+    context.bot_data.update(payload)
 
 # Responses
 def handle_response(text: str) -> str:
@@ -52,7 +70,7 @@ if __name__ == '__main__':
     # Commands
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('help', help_command))
-    app.add_handler(CommandHandler('custom', custom_command))
+    app.add_handler(CommandHandler('onboard', onboard_command))
 
     # Messages
     app.add_handler(MessageHandler(filters.TEXT, handle_message))
