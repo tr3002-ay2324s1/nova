@@ -48,3 +48,9 @@ pip install -r requirements.txt
 ## Usage
 
 Explain how to run or use your project here.
+
+To start the bot, run this command and then head to [t.me/brio_tracker_bot](t.me/brio_tracker_bot)
+
+```
+python3 bot.py
+```
