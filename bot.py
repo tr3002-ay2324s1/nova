@@ -11,7 +11,11 @@ USERNAME = os.getenv("USERNAME")
 
 # Commands
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! Welcome to Brio, your personal habit tracker!")
+    await update.message.reply_text("""
+                                    hey there :) welcome to brio, your personal habit tracker 💪🏽
+                                    
+                                    type /onboard to get started!
+                                    """)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("I am here to help you anytime!")
