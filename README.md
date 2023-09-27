@@ -92,7 +92,7 @@ These instructions will help you get the project up and running on your local ma
   ```
 
   - Setup Project
-  
+
   ```bash
   doppler setup # Setup project using doppler.yaml
   ```
