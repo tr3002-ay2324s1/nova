@@ -19,13 +19,13 @@ def remove_job_if_exists(job_name: str, context: ContextTypes.DEFAULT_TYPE) -> b
 
 
 async def add_once_job(
-    job, due: float, update: Update, context: ContextTypes.DEFAULT_TYPE
+    job, due: float, chat_id: int, context: ContextTypes.DEFAULT_TYPE
 ):
     """Add a once job to the queue."""
-    chat_id = update.effective_message.chat_id
-
     if due < 0:
-        await update.effective_message.reply_text("Sorry we cannot go back to future!")
+        await context.bot.send_message(
+            chat_id=chat_id, text="Sorry we cannot go back to future!"
+        )
         return
 
     job_name = f"{chat_id}_{job.__name__}_once"
@@ -41,12 +41,10 @@ async def add_daily_job(
     job,
     time: time,
     days: tuple[int],
-    update: Update,
+    chat_id: int,
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """Add a daily job to the queue."""
-    chat_id = update.effective_message.chat_id
-
     job_name = f"{chat_id}_{job.__name__}_daily"
     remove_job_if_exists(job_name, context)
 
