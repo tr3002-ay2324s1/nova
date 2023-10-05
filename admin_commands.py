@@ -7,24 +7,60 @@ logger = configure_logger()
 
 from job_queue import add_once_job
 from morning_flow import morning_flow_greeting
+import google.oauth2.credentials
+import google_auth_oauthlib.flow
+
+async def get_login_google():
+  # Use the credentials.json file to identify the application requesting
+  # authorization. The client ID (from that file) and access scopes are required.
+  flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+      'credentials.json',
+      scopes=['https://www.googleapis.com/auth/calendar.events'])
+
+  # Indicate where the API server will redirect the user after the user completes
+  # the authorization flow. The redirect URI is required. The value must exactly
+  # match one of the authorized redirect URIs for the OAuth 2.0 client, which you
+  # configured in the API Console. If this value doesn't match an authorized URI,
+  # you will get a 'redirect_uri_mismatch' error.
+  flow.redirect_uri = 'https://t.me/brio_tracker_bot'
+
+  # Generate URL for request to Google's OAuth 2.0 server.
+  # Use kwargs to set optional request parameters.
+  authorization_url, state = flow.authorization_url(
+      # Enable offline access so that you can refresh an access token without
+      # re-prompting the user for permission. Recommended for web server apps.
+      access_type='online',
+      # Enable incremental authorization. Recommended as a best practice.
+      include_granted_scopes='true')
+  
+  authorization_url: str
+  state: str
+
+  return authorization_url, state
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.chat_data["state"] = "start_command"
+  context.chat_data["state"] = "start_command"
 
-    logger.info("user_id: " + str(update.message.from_user.id))
-    logger.info("tele_handle: " + str(update.message.from_user.username))
+  if update.message is None or update.message.from_user is None:
+    return
+  logger.info("user_id: " + str(update.message.from_user.id))
+  logger.info("tele_handle: " + str(update.message.from_user.username))
 
-    await add_once_job(
-        morning_flow_greeting, 2, update.effective_message.chat_id, context
-    )
+  if update.effective_message is not None:
+    chat_id = update.effective_message.chat_id
+    await add_once_job(morning_flow_greeting, 2, chat_id, context)
 
-    await update.message.reply_text(
-        """
-                                    hey there :) welcome to brio,
-your personal habit tracker 💪🏽
-"""
-    )
+  await update.message.reply_text(
+    """
+    hey there :) welcome to brio,
+    your personal habit tracker 💪🏽
+    """
+  )
+
+  url, state = await get_login_google()
+
+  await update.message.reply_text(f"Please login to your google account here: {url}")
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
