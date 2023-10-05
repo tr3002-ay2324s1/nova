@@ -108,3 +108,10 @@ To start the bot, run this command and then head to [t.me/brio_tracker_bot](http
 ```bash
 doppler run --command "python3 bot.py"
 ```
+
+If you installed more dependencies in python, run the code below to update `requirements.txt`.
+
+```bash
+pip freeze > requirements.txt
+```
+
