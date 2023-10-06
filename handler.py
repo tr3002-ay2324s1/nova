@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 
 from task import task_dateline, end_add_task
 from job_queue import add_once_job
+from google_calendar import login_complete
 from morning_flow import (
     morning_flow_event_edit,
     morning_flow_event_update,
@@ -37,6 +38,12 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     logger.info("handle_callback_query: " + str(query.data))
 
     # first_time
+    if query.data == "google_login":
+        # TODO: login to google calendar
+        await login_complete(update, context)
+    elif query.data == "login_complete_yes":
+        # TODO: update database that login complete
+        return ConversationHandler.END
     if query.data == "morning_flow_events_acknowledge":
         # TODO: save morning_flow_events_acknowledge here
         return ConversationHandler.END
