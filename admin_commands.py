@@ -5,8 +5,7 @@ from logger_config import configure_logger
 
 logger = configure_logger()
 
-from job_queue import add_once_job
-from morning_flow import morning_flow_greeting
+from google_calendar import google_login
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -15,16 +14,11 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("user_id: " + str(update.message.from_user.id))
     logger.info("tele_handle: " + str(update.message.from_user.username))
 
-    await add_once_job(
-        morning_flow_greeting, 2, update.effective_message.chat_id, context
+    await update.message.reply_text(
+        "Hey there :)\nWelcome to Nova, your personal habit tracker 💪🏽"
     )
 
-    await update.message.reply_text(
-        """
-                                    hey there :) welcome to brio,
-your personal habit tracker 💪🏽
-"""
-    )
+    await google_login(update, context)
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
