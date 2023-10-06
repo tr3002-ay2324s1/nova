@@ -16,7 +16,7 @@ async def task_dateline(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.chat_data["state"] = "task_dateline"
 
     await update.message.reply_text(
-        "When would you like to complete this task by? (answer in MDYY format)"
+        "When would you like to complete this task by? (answer in MDYY format e.g. 1121 for 1 Jan 2021 and 111122 for 11 Nov 2022)"
     )
 
 
