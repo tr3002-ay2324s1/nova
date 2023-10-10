@@ -5,6 +5,8 @@ from logger_config import configure_logger
 
 logger = configure_logger()
 
+from night_flow import night_flow_review
+
 
 async def morning_flow_greeting(context: ContextTypes.DEFAULT_TYPE) -> None:
     context.chat_data["state"] = "morning_flow_greeting"
@@ -110,9 +112,7 @@ async def morning_flow_event_update(
 
     await update.message.reply_text("Updated your schedule!")
 
-    # TODO: check database for next task
-    # if next task exists:
-    await update.message.reply_text("Nice job! Next up you have <task> at <time>!")
+    await morning_flow_check_next_task(update, context)
 
 
 async def morning_flow_event_end(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -140,9 +140,7 @@ async def morning_flow_next_event(
 ) -> None:
     context.chat_data["state"] = "morning_flow_next_event"
 
-    # TODO: check database for next task
-    # if next task exists:
-    await update.message.reply_text("Nice job! Next up you have <task> at <time>!")
+    await morning_flow_check_next_task(update, context)
 
 
 async def morning_flow_new_task(
@@ -164,3 +162,15 @@ async def morning_flow_new_task(
         "You have some time at <time>. Would you like to work on it then?",
         reply_markup=reply_markup,
     )
+
+
+async def morning_flow_check_next_task(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    context.chat_data["state"] = "morning_flow_check_next_task"
+
+    # TODO: check database for next task
+    # if next task exists:
+    await update.message.reply_text("Nice job! Next up you have <task> at <time>!")
+    # else:
+    # await night_flow_review(update, context)

@@ -5,8 +5,7 @@ from logger_config import configure_logger
 
 logger = configure_logger()
 
-from job_queue import add_once_job
-from morning_flow import morning_flow_greeting
+from google_calendar import google_login
 import google_auth_oauthlib.flow
 
 async def get_login_google():
@@ -41,6 +40,8 @@ async def get_login_google():
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
   context.chat_data["state"] = "start_command"
 
+  logger.info("user_id: " + str(update.message.from_user.id))
+  logger.info("tele_handle: " + str(update.message.from_user.username))
   if update.message is None or update.message.from_user is None:
     return
   logger.info("user_id: " + str(update.message.from_user.id))
@@ -57,12 +58,7 @@ welcome to nova,
 your personal assistant 💪🏽
     """
   )
-
-  url, state = await get_login_google()
-
-  await update.message.reply_text("First off, we'll need your google calendar access")
-
-  await update.message.reply_text(parse_mode="HTML", text=f"Please login to your google account here by going to <a href='{url}'>this link</a>")
+  await google_login(update, context)
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
