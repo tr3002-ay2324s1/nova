@@ -1,5 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
+from google_oauth_utils import get_login_google
 
 from logger_config import configure_logger
 
@@ -9,7 +10,7 @@ from datetime import datetime, timedelta
 
 from task import task_dateline, end_add_task
 from job_queue import add_once_job
-from google_calendar import login_complete
+from google_calendar import google_login, login_start
 from morning_flow import (
     morning_flow_event_edit,
     morning_flow_event_update,
@@ -30,19 +31,25 @@ from night_flow import (
     night_flow_next_day_schedule_edit,
 )
 
+
 async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    if query is None:
+        return
     await query.answer()
 
     logger.info("handle_callback_query: " + str(query.data))
 
     # first_time
     if query.data == "google_login":
-        # TODO: login to google calendar
-        await login_complete(update, context)
+        await login_start(update, context)
     elif query.data == "login_complete_yes":
         # TODO: update database that login complete
         return ConversationHandler.END
+    elif query.data == "login_complete_no":
+        url, state = await get_login_google()
+        await google_login(update, context, url, state)
+
     if query.data == "morning_flow_events_acknowledge":
         # TODO: save morning_flow_events_acknowledge here
         return ConversationHandler.END
