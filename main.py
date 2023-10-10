@@ -16,6 +16,7 @@ from admin_commands import start_command, help_command, cancel_command
 from unknown_response import unknown_command, unknown_text
 from handler import handle_callback_query, handle_text
 from task import add_task
+from view import view_list, view_schedule
 
 load_dotenv()
 
@@ -29,6 +30,8 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("task", add_task))
+    app.add_handler(CommandHandler("list", view_list))
+    app.add_handler(CommandHandler("schedule", view_schedule))
     app.add_handler(CommandHandler("cancel", cancel_command))
 
     app.add_handler(CallbackQueryHandler(handle_callback_query))
