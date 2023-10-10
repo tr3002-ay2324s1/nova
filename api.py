@@ -57,6 +57,8 @@ async def google_oauth_callback(request: Request, response: Response):
       'scopes': credentials.scopes
   }
 
+  # TODO: Save refresh token and create user row in DB
+
   # Create a Response object with the 307 redirect status code
   response = Response(status_code=307, headers={'Location': 'https://www.t.me/brio_tracker_bot'})
 
