@@ -8,19 +8,13 @@ API_URL = os.getenv("API_URL")
 API_KEY = os.getenv("API_KEY")
 supabase = create_client(API_URL, API_KEY)
 
-data = {
-    'telegram_user_id': 1,
-    'username': 's7u4rt99',
-    'name': 'stuart',
-    'email': 'chayboon@gmail.com'
-}
-
-def add_user(telegram_user_id, username, name, email):
+def add_user(telegram_user_id, username, name, email, google_refresh_token):
     data = {
         'telegram_user_id': telegram_user_id,
         'username': username,
         'name': name,
-        'email': email
+        'email': email,
+        'google_refresh_token': google_refresh_token
     }
     supabase.table('Users').insert(data).execute()
 
