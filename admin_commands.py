@@ -7,7 +7,6 @@ logger = configure_logger()
 
 from job_queue import add_once_job
 from morning_flow import morning_flow_greeting
-import google.oauth2.credentials
 import google_auth_oauthlib.flow
 
 async def get_login_google():
@@ -22,14 +21,14 @@ async def get_login_google():
   # match one of the authorized redirect URIs for the OAuth 2.0 client, which you
   # configured in the API Console. If this value doesn't match an authorized URI,
   # you will get a 'redirect_uri_mismatch' error.
-  flow.redirect_uri = 'https://t.me/brio_tracker_bot'
+  flow.redirect_uri = 'http://127.0.0.1:8000/google_oauth_callback'
 
   # Generate URL for request to Google's OAuth 2.0 server.
   # Use kwargs to set optional request parameters.
   authorization_url, state = flow.authorization_url(
       # Enable offline access so that you can refresh an access token without
       # re-prompting the user for permission. Recommended for web server apps.
-      access_type='online',
+      access_type='offline',
       # Enable incremental authorization. Recommended as a best practice.
       include_granted_scopes='true')
   
@@ -53,14 +52,17 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
   await update.message.reply_text(
     """
-    hey there :) welcome to brio,
-    your personal habit tracker 💪🏽
+    hey there :)
+welcome to nova,
+your personal assistant 💪🏽
     """
   )
 
   url, state = await get_login_google()
 
-  await update.message.reply_text(f"Please login to your google account here: {url}")
+  await update.message.reply_text("First off, we'll need your google calendar access")
+
+  await update.message.reply_text(parse_mode="HTML", text=f"Please login to your google account here by going to <a href='{url}'>this link</a>")
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):

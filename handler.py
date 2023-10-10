@@ -13,7 +13,6 @@ from morning_flow import (
     morning_flow_new_task,
 )
 
-
 async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
