@@ -1,3 +1,3 @@
 setup:
-  project: brio
+  project: nova
   config: dev
