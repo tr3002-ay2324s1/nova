@@ -1,13 +1,12 @@
 from fastapi import FastAPI, Request, Response
+from fastapi.logger import logger
 from starlette.middleware.sessions import SessionMiddleware
 from os import environ
 import json
-
 import google_auth_oauthlib.flow
 from constants import BASE_URL
-
 from database import add_user
-
+import logging
 
 # Ensure that all requests include an 'example.com' or
 # '*.example.com' host header, and strictly enforce https-only access.
@@ -23,6 +22,14 @@ from database import add_user
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=environ.get("GOOGLE_CLIENT_SECRET"))
 
+@app.on_event("startup")
+async def startup_event():
+    global logger
+    logger = logging.getLogger("uvicorn.access")
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+    logger.addHandler(handler)
+
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
@@ -34,8 +41,10 @@ async def ping():
 @app.get("/google_oauth_callback")
 async def google_oauth_callback(request: Request, response: Response):
   state, username, telegram_user_id = None, None, None
-  if "state" in request.session:
-    state_dict_dumps = request.session['state']
+  if "state" in request.query_params:
+    state_dict_dumps = request.query_params.get("state")
+    if not state_dict_dumps:
+      raise Exception("state not in session")
     state_dict=json.loads(state_dict_dumps)
     telegram_user_id = state_dict["telegram_user_id"]
     username = state_dict["username"]
@@ -50,6 +59,8 @@ async def google_oauth_callback(request: Request, response: Response):
   code = request.query_params.get("code")
 
   flow.fetch_token(code=code)
+
+  logger.info("flow.credentials: " + str(flow.credentials))
 
   # Store the credentials in the session.
   credentials = flow.credentials

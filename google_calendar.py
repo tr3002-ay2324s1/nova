@@ -1,3 +1,4 @@
+from typing import List
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from database import fetch_user
@@ -5,7 +6,6 @@ from database import fetch_user
 from logger_config import configure_logger
 
 logger = configure_logger()
-
 
 async def google_login(
     update: Update, context: ContextTypes.DEFAULT_TYPE, auth_url: str, state: str
@@ -32,11 +32,12 @@ async def login_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.chat_data["state"] = "login_start"
     telegram_user_id = update.message.from_user.id
 
-    user = fetch_user(telegram_user_id=telegram_user_id)
+    user: List[dict] = fetch_user(telegram_user_id=telegram_user_id)
 
     if user and len(user) > 0:
+      logger.info("USER: " + str(user))
       await update.message.reply_text(
-          f"Nice to see you back {user[0].username}"
+          f"Nice to see you back {user[0].get('username', 'user')}"
       )
     else:
       keyboard = [
