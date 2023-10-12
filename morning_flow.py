@@ -5,21 +5,23 @@ from logger_config import configure_logger
 
 logger = configure_logger()
 
+from utils import send_message
+
 from night_flow import night_flow_review
 
 
 async def morning_flow_greeting(context: ContextTypes.DEFAULT_TYPE) -> None:
-    context.chat_data["state"] = "morning_flow_greeting"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "morning_flow_greeting"
 
-    await context.bot.send_message(
-        context.job.chat_id, text=f"Good morning! Here's how your day looks like:"
-    )
+    await send_message(None, context, "Good morning! Here's how your day looks like:")
 
     await morning_flow_events(context)
 
 
 async def morning_flow_events(context: ContextTypes.DEFAULT_TYPE) -> None:
-    context.chat_data["state"] = "morning_flow_events"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "morning_flow_events"
 
     # TODO: fetch data from database
     data = "<data from database>"
@@ -40,17 +42,14 @@ async def morning_flow_events(context: ContextTypes.DEFAULT_TYPE) -> None:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await context.bot.send_message(
-        context.job.chat_id,
-        text=str(data),
-        reply_markup=reply_markup,
-    )
+    await send_message(None, context, str(data), reply_markup=reply_markup)
 
 
 async def morning_flow_events_edit(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    context.chat_data["state"] = "morning_flow_events_edit"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "morning_flow_events_edit"
 
     keyboard = [
         [
@@ -59,14 +58,12 @@ async def morning_flow_events_edit(
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text(
-        "Have you edited?",
-        reply_markup=reply_markup,
-    )
+    await send_message(update, context, "Have you edited", reply_markup=reply_markup)
 
 
 async def morning_flow_event(context: ContextTypes.DEFAULT_TYPE) -> None:
-    context.chat_data["state"] = "morning_flow_event"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "morning_flow_event"
 
     keyboard = [
         [
@@ -80,9 +77,10 @@ async def morning_flow_event(context: ContextTypes.DEFAULT_TYPE) -> None:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await context.bot.send_message(
-        context.job.chat_id,
-        text="It's almost <time>. Time to work on the <task>!",
+    await send_message(
+        None,
+        context,
+        "It's almost <time>. Time to work on the <task>!",
         reply_markup=reply_markup,
     )
 
@@ -90,7 +88,8 @@ async def morning_flow_event(context: ContextTypes.DEFAULT_TYPE) -> None:
 async def morning_flow_event_edit(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    context.chat_data["state"] = "morning_flow_event_edit"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "morning_flow_event_edit"
 
     keyboard = [
         [
@@ -99,24 +98,23 @@ async def morning_flow_event_edit(
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text(
-        "Have you edited?",
-        reply_markup=reply_markup,
-    )
+    await send_message(update, context, "Have you edited?", reply_markup=reply_markup)
 
 
 async def morning_flow_event_update(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    context.chat_data["state"] = "morning_flow_event_update"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "morning_flow_event_update"
 
-    await update.message.reply_text("Updated your schedule!")
+    await send_message(update, context, "Updated your schedule!")
 
     await morning_flow_check_next_task(update, context)
 
 
 async def morning_flow_event_end(context: ContextTypes.DEFAULT_TYPE) -> None:
-    context.chat_data["state"] = "morning_flow_event_end"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "morning_flow_event_end"
 
     keyboard = [
         [
@@ -128,9 +126,10 @@ async def morning_flow_event_end(context: ContextTypes.DEFAULT_TYPE) -> None:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await context.bot.send_message(
-        context.job.chat_id,
-        text="How was your deep work session? Did you get it done?",
+    await send_message(
+        None,
+        context,
+        "How was your deep work session? Did you get it done?",
         reply_markup=reply_markup,
     )
 
@@ -138,7 +137,8 @@ async def morning_flow_event_end(context: ContextTypes.DEFAULT_TYPE) -> None:
 async def morning_flow_next_event(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    context.chat_data["state"] = "morning_flow_next_event"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "morning_flow_next_event"
 
     await morning_flow_check_next_task(update, context)
 
@@ -146,7 +146,8 @@ async def morning_flow_next_event(
 async def morning_flow_new_task(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    context.chat_data["state"] = "morning_flow_new_task"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "morning_flow_new_task"
 
     keyboard = [
         [
@@ -158,7 +159,9 @@ async def morning_flow_new_task(
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text(
+    await send_message(
+        update,
+        context,
         "You have some time at <time>. Would you like to work on it then?",
         reply_markup=reply_markup,
     )
@@ -167,10 +170,15 @@ async def morning_flow_new_task(
 async def morning_flow_check_next_task(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    context.chat_data["state"] = "morning_flow_check_next_task"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "morning_flow_check_next_task"
 
     # TODO: check database for next task
     # if next task exists:
-    await update.message.reply_text("Nice job! Next up you have <task> at <time>!")
+    await send_message(
+        update,
+        context,
+        "You have <task> at <time> next!",
+    )
     # else:
     # await night_flow_review(update, context)

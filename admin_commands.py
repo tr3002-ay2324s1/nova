@@ -15,6 +15,7 @@ from datetime import time
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.chat_data is not None:
         context.chat_data["state"] = "start_command"
+        logger.info("state: " + context.chat_data["state"])
 
     if update.message is not None and update.message.from_user is not None:
         logger.info("user_id: " + str(update.message.from_user.id))
