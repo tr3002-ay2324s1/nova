@@ -10,7 +10,12 @@ logger = configure_logger()
 
 def remove_job_if_exists(job_name: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Remove job with the given chat_id and job_name. Returns whether the job was removed."""
-    current_jobs = context.job_queue.get_jobs_by_name(job_name)
+    if context.job_queue is None:
+        return False
+    current_jobs = (
+        context.job_queue.get_jobs_by_name(job_name) if context.job_queue else []
+    )
+
     if not current_jobs:
         return False
     for job in current_jobs:
@@ -31,11 +36,13 @@ async def add_once_job(
 
     job_name = f"{chat_id}_{job.__name__}_once"
     remove_job_if_exists(job_name, context)
-    context.job_queue.run_once(job, due, chat_id=chat_id, name=job_name, data=due)
 
-    logger.info(
-        f"Once job added for chat ID {chat_id}. Due: {due}, Data: {due}, Name: {job_name}"
-    )
+    if context.job_queue is not None:
+        context.job_queue.run_once(job, due, chat_id=chat_id, name=job_name, data=due)
+
+        logger.info(
+            f"Once job added for chat ID {chat_id}. Due: {due}, Data: {due}, Name: {job_name}"
+        )
 
 
 async def add_daily_job(
@@ -61,12 +68,13 @@ async def add_daily_job(
         6,
     )  # The job will run every day (0=Monday, 1=Tuesday, ..., 6=Sunday)
 
-    data_string = str(time.isoformat()) + " " + str(days)
+    if context.job_queue is not None:
+        data_string = str(time.isoformat()) + " " + str(days)
 
-    context.job_queue.run_daily(
-        job, time, days, chat_id=chat_id, name=job_name, data=data_string
-    )
+        context.job_queue.run_daily(
+            job, time, days, chat_id=chat_id, name=job_name, data=data_string
+        )
 
-    logger.info(
-        f"Daily job added for chat ID {chat_id}. Time: {time}, Days: {days}, Data: {data_string}, Name: {job_name}"
-    )
+        logger.info(
+            f"Daily job added for chat ID {chat_id}. Time: {time}, Days: {days}, Data: {data_string}, Name: {job_name}"
+        )
