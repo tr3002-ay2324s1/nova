@@ -4,6 +4,7 @@ from os import environ
 import json
 
 import google_auth_oauthlib.flow
+from constants import BASE_URL
 
 from database import add_user
 
@@ -45,7 +46,7 @@ async def google_oauth_callback(request: Request, response: Response):
     scopes=['https://www.googleapis.com/auth/calendar.events'],
     state=state
   )
-  flow.redirect_uri = 'http://127.0.0.1:8000/google_oauth_callback'
+  flow.redirect_uri = BASE_URL + '/google_oauth_callback'
   code = request.query_params.get("code")
 
   flow.fetch_token(code=code)

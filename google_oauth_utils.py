@@ -1,6 +1,8 @@
 from google_auth_oauthlib.flow import Flow
 import json
 
+from constants import BASE_URL
+
 async def get_login_google(telegram_user_id: int, username: str):
   # Use the credentials.json file to identify the application requesting
   # authorization. The client ID (from that file) and access scopes are required.
@@ -13,7 +15,7 @@ async def get_login_google(telegram_user_id: int, username: str):
   # match one of the authorized redirect URIs for the OAuth 2.0 client, which you
   # configured in the API Console. If this value doesn't match an authorized URI,
   # you will get a 'redirect_uri_mismatch' error.
-  flow.redirect_uri = 'http://127.0.0.1:8000/google_oauth_callback'
+  flow.redirect_uri = BASE_URL + '/google_oauth_callback'
 
   # Generate URL for request to Google's OAuth 2.0 server.
   # Use kwargs to set optional request parameters.
