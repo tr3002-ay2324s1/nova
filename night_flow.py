@@ -5,9 +5,12 @@ from logger_config import configure_logger
 
 logger = configure_logger()
 
+from utils import send_message
+
 
 async def night_flow_review(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    context.chat_data["state"] = "night_flow_review"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "night_flow_review"
 
     keyboard = [
         [
@@ -19,7 +22,9 @@ async def night_flow_review(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text(
+    await send_message(
+        update,
+        context,
         "That's the end of your work day! Would you like to review now?",
         reply_markup=reply_markup,
     )
@@ -28,41 +33,46 @@ async def night_flow_review(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 async def night_flow_feeling(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    context.chat_data["state"] = "night_flow_feeling"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "night_flow_feeling"
 
     # TODO: fetch data from database
 
-    await update.message.reply_text(
-        "Today you completed tasks <a>, <b>, <c>. How are you feeling?"
+    await send_message(
+        update, context, "Today you completed tasks <a>, <b>, <c>. How are you feeling?"
     )
 
 
 async def night_flow_favourite(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    context.chat_data["state"] = "night_flow_favourite"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "night_flow_favourite"
 
-    await update.message.reply_text("What was your favourite part of the day?")
+    await send_message(update, context, "What was your favourite part of the day?")
 
 
 async def night_flow_proud(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    context.chat_data["state"] = "night_flow_proud"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "night_flow_proud"
 
-    await update.message.reply_text("What are you proud of yourself for today?")
+    await send_message(update, context, "What are you proud of yourself for today?")
 
 
 async def night_flow_improve(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    context.chat_data["state"] = "night_flow_improve"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "night_flow_improve"
 
-    await update.message.reply_text("What was one thing you can improve on?")
+    await send_message(update, context, "What was one thing you can improve on?")
 
 
 async def night_flow_next_day_schedule(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    context.chat_data["state"] = "night_flow_next_day_schedule"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "night_flow_next_day_schedule"
 
     keyboard = [
         [
@@ -78,35 +88,42 @@ async def night_flow_next_day_schedule(
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text("Here's your schedule for tomorrow!")
+    await send_message(update, context, "Here's your schedule for tomorrow!")
 
     # TODO: fetch data from database
 
-    await update.message.reply_text("<schedule>", reply_markup=reply_markup)
+    await send_message(update, context, "<schedule>", reply_markup=reply_markup)
 
 
 async def night_flow_pick_time(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    context.chat_data["state"] = "night_flow_pick_time"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "night_flow_pick_time"
 
-    await update.message.reply_text(
-        "Pick a time to review later (answer in 24h format e.g. 1800 for 6pm)"
+    await send_message(
+        update,
+        context,
+        "Pick a time to review later (answer in 24h format e.g. 1800 for 6pm)",
     )
 
 
 async def night_flow_invalid_time(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    context.chat_data["state"] = "night_flow_invalid_time"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "night_flow_invalid_time"
 
-    await update.message.reply_text(
-        "Invalid Time! Please try again. (answer in 24h format e.g. 1800 for 6pm)"
+    await send_message(
+        update,
+        context,
+        "Invalid Time! Please try again. (answer in 24h format e.g. 1800 for 6pm)",
     )
 
 
 async def night_flow_new_review_time(context: ContextTypes.DEFAULT_TYPE) -> None:
-    context.chat_data["state"] = "night_flow_new_review_time"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "night_flow_new_review_time"
 
     keyboard = [
         [
@@ -120,27 +137,27 @@ async def night_flow_new_review_time(context: ContextTypes.DEFAULT_TYPE) -> None
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await context.bot.send_message(
-        context.job.chat_id,
-        text="It is time to review your day!",
-        reply_markup=reply_markup,
+    await send_message(
+        None, context, "It is time to review your day!", reply_markup=reply_markup
     )
 
 
 async def night_flow_skip(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    context.chat_data["state"] = "night_flow_skip"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "night_flow_skip"
 
-    await update.message.reply_text(
-        "Alright, let's get straight to planning for tomorrow then!"
+    await send_message(
+        update, context, "Alright, let's get straight to planning for tomorrow then!"
     )
 
     await night_flow_next_day_schedule(update, context)
 
 
 async def night_flow_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.chat_data["state"] = "night_flow_end"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "night_flow_end"
 
-    await update.message.reply_text("Good night!")
+    await send_message(update, context, "Good night!")
 
     return ConversationHandler.END
 
@@ -148,16 +165,16 @@ async def night_flow_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def night_flow_next_day_schedule_edit(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    context.chat_data["state"] = "night_flow_next_day_schedule_edit"
+    if context.chat_data is not None:
+        context.chat_data["state"] = "night_flow_next_day_schedule_edit"
 
     keyboard = [
         [
-            InlineKeyboardButton("Yes", callback_data="night_flow_next_day_schedule_edit_yes"),
+            InlineKeyboardButton(
+                "Yes", callback_data="night_flow_next_day_schedule_edit_yes"
+            ),
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text(
-        "Have you edited?",
-        reply_markup=reply_markup,
-    )
+    await send_message(update, context, "Have you edited?", reply_markup=reply_markup)
