@@ -55,7 +55,11 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         # TODO: update database that login complete
         return ConversationHandler.END
     elif query.data == "login_complete_no":
-        url, state = await get_login_google()
+        telegram_user_id = query.from_user.id
+        telegram_username = query.from_user.username
+        url, state = await get_login_google(
+            telegram_user_id=telegram_user_id, username=telegram_username or ""
+        )
         await google_login(update, context, url, state)
 
     if query.data == "morning_flow_events_acknowledge":
