@@ -1,6 +1,7 @@
 from google_auth_oauthlib.flow import Flow
+import json
 
-async def get_login_google():
+async def get_login_google(telegram_user_id: int, username: str):
   # Use the credentials.json file to identify the application requesting
   # authorization. The client ID (from that file) and access scopes are required.
   flow = Flow.from_client_secrets_file(
@@ -21,9 +22,11 @@ async def get_login_google():
       # re-prompting the user for permission. Recommended for web server apps.
       access_type='offline',
       # Enable incremental authorization. Recommended as a best practice.
-      include_granted_scopes='true')
-  
-  authorization_url: str
-  state: str
+      include_granted_scopes='true',
+      state=json.dumps({
+        "telegram_user_id": str(telegram_user_id),
+        "username": username
+      })
+    )
 
   return authorization_url, state

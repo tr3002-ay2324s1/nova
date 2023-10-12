@@ -1,5 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+from database import fetch_user
 
 from logger_config import configure_logger
 
@@ -29,17 +30,25 @@ async def google_login(
 
 async def login_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.chat_data["state"] = "login_start"
+    telegram_user_id = update.message.from_user.id
 
-    keyboard = [
-        [
-            InlineKeyboardButton("Yes", callback_data="login_complete_yes"),
-        ],
-        [
-            InlineKeyboardButton("No", callback_data="login_complete_no"),
-        ],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    user = fetch_user(telegram_user_id=telegram_user_id)
 
-    await update.message.reply_text(
-        "Have you signed in to google?", reply_markup=reply_markup
-    )
+    if user and len(user) > 0:
+      await update.message.reply_text(
+          f"Nice to see you back {user[0].username}"
+      )
+    else:
+      keyboard = [
+          [
+              InlineKeyboardButton("Yes", callback_data="login_complete_yes"),
+          ],
+          [
+              InlineKeyboardButton("No", callback_data="login_complete_no"),
+          ],
+      ]
+      reply_markup = InlineKeyboardMarkup(keyboard)
+
+      await update.message.reply_text(
+          "Have you given permission for Google Cal before?", reply_markup=reply_markup
+      )

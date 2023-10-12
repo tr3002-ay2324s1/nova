@@ -1,11 +1,12 @@
 import os
-import json
 from supabase import create_client
 from dotenv import load_dotenv
 load_dotenv()
 
 API_URL = os.getenv("API_URL")
 API_KEY = os.getenv("API_KEY")
+if not API_URL or not API_KEY:
+    raise Exception("Supabase API_URL or API_KEY not found in .env file")
 supabase = create_client(API_URL, API_KEY)
 
 def add_user(telegram_user_id, username, name, email, google_refresh_token):

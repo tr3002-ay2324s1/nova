@@ -1,26 +1,21 @@
 from telegram import ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes, ConversationHandler
-from google_oauth_utils import get_login_google
 
 from logger_config import configure_logger
 
 logger = configure_logger()
 
 from google_calendar import login_start
-from job_queue import add_once_job
-from morning_flow import morning_flow_greeting
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
   context.chat_data["state"] = "start_command"
 
-  if update.message is None or update.message.from_user is None:
-    return
   logger.info("user_id: " + str(update.message.from_user.id))
   logger.info("tele_handle: " + str(update.message.from_user.username))
 
-  if update.effective_message is not None:
-    chat_id = update.effective_message.chat_id
-    await add_once_job(morning_flow_greeting, 2, chat_id, context)
+  # if update.effective_message is not None:
+  #   chat_id = update.effective_message.chat_id
+  #   await add_once_job(morning_flow_greeting, 2, chat_id, context)
 
   await update.message.reply_text(
     """

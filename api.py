@@ -1,8 +1,11 @@
 from fastapi import FastAPI, Request, Response
 from starlette.middleware.sessions import SessionMiddleware
 from os import environ
+import json
 
 import google_auth_oauthlib.flow
+
+from database import add_user
 
 
 # Ensure that all requests include an 'example.com' or
@@ -29,35 +32,40 @@ async def ping():
 
 @app.get("/google_oauth_callback")
 async def google_oauth_callback(request: Request, response: Response):
+  state, username, telegram_user_id = None, None, None
   if "state" in request.session:
-    state = request.session['state']
+    state_dict_dumps = request.session['state']
+    state_dict=json.loads(state_dict_dumps)
+    telegram_user_id = state_dict["telegram_user_id"]
+    username = state_dict["username"]
   else:
-    state = None
+    raise Exception("state not in session")
   flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
     'credentials.json',
     scopes=['https://www.googleapis.com/auth/calendar.events'],
     state=state
-    )
+  )
   flow.redirect_uri = 'http://127.0.0.1:8000/google_oauth_callback'
   code = request.query_params.get("code")
-  print("CODE", code)
+
   flow.fetch_token(code=code)
 
   # Store the credentials in the session.
-  # ACTION ITEM for developers:
-  #     Store user's access and refresh tokens in your data store if
-  #     incorporating this code into your real app.
   credentials = flow.credentials
   request.session['credentials'] = {
       'token': credentials.token,
       'refresh_token': credentials.refresh_token,
       # 'token_uri': credentials.token_uri,
-      'client_id': credentials.client_id,
-      'client_secret': credentials.client_secret,
       'scopes': credentials.scopes
   }
 
-  # TODO: Save refresh token and create user row in DB
+  add_user(
+     telegram_user_id=int(telegram_user_id) if telegram_user_id else 0,
+     username=username if username else "bad_entry",
+     name=username if username else "bad_entry",
+     email="",
+     google_refresh_token=flow.credentials.refresh_token,
+  )
 
   # Create a Response object with the 307 redirect status code
   response = Response(status_code=307, headers={'Location': 'https://www.t.me/brio_tracker_bot'})
