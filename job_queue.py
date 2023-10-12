@@ -1,6 +1,7 @@
 from datetime import time
 from telegram import Update
 from telegram.ext import ContextTypes
+import pytz
 
 from logger_config import configure_logger
 
@@ -40,13 +41,25 @@ async def add_once_job(
 async def add_daily_job(
     job,
     time: time,
-    days: tuple[int],
     chat_id: int,
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """Add a daily job to the queue."""
     job_name = f"{chat_id}_{job.__name__}_daily"
     remove_job_if_exists(job_name, context)
+
+    # Explicitly set the time zone to America/New_York
+    time = time.replace(tzinfo=pytz.timezone("America/New_York"))
+
+    days = (
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+    )  # The job will run every day (0=Monday, 1=Tuesday, ..., 6=Sunday)
 
     data_string = str(time.isoformat()) + " " + str(days)
 
