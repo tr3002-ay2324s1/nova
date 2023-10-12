@@ -35,7 +35,15 @@ from night_flow import (
 async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if query is None:
+        logger.info(
+            "handle_callback_query: None\n"
+            + "update: "
+            + str(update)
+            + "\ncontext: "
+            + str(context)
+        )
         return
+
     await query.answer()
 
     logger.info("handle_callback_query: " + str(query.data))
@@ -101,14 +109,16 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_message is None or update.effective_message.text is None:
+        logger.info("handle_text: None " + str(update))
+        return
+
     text = update.effective_message.text
 
     logger.info("handle_text: " + str(text))
 
-    if "state" in context.chat_data.keys():
-        state = context.chat_data["state"]
-    else:
-        state = ""
+    chat_data = context.chat_data
+    state = chat_data.get("state") if chat_data is not None else ""
 
     logger.info("state: " + str(state))
 
@@ -136,7 +146,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await validate_night_flow_pick_time(update, context, text)
 
 
-async def validate_night_flow_pick_time(update, context, text):
+async def validate_night_flow_pick_time(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, text: str
+):
     if text == None:
         await night_flow_invalid_time(update, context)
     else:
@@ -159,6 +171,10 @@ async def validate_night_flow_pick_time(update, context, text):
 
                 # Calculate the number of seconds from now till the input time.
             delta_seconds = (input_dt - current_dt).seconds
+
+            if update.effective_chat is None:
+                logger.info("update.effective_chat: None")
+                return
 
             await add_once_job(
                 night_flow_review, delta_seconds, update.effective_chat.id, context
