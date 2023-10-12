@@ -70,5 +70,5 @@ async def login_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
 
     await send_message(
-        update, context, "Have you signed in to google?", reply_markup=reply_markup
+        update, context, "Have you signed in to google yet?", reply_markup=reply_markup
     )
