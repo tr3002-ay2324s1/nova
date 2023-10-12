@@ -152,7 +152,9 @@ async def night_flow_next_day_schedule_edit(
 
     keyboard = [
         [
-            InlineKeyboardButton("Yes", callback_data="night_flow_next_day_schedule_edit_yes"),
+            InlineKeyboardButton(
+                "Yes", callback_data="night_flow_next_day_schedule_edit_yes"
+            ),
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)

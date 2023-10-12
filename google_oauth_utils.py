@@ -1,34 +1,160 @@
+from enum import Enum
+from typing import Dict, List, Type, TypedDict, Union
 from google_auth_oauthlib.flow import Flow
+import datetime
+from os import getenv
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
 import json
 
-from constants import BASE_URL
+from constants import BASE_URL, GOOGLE_SCOPES
+
+
+class GoogleCalendarEventStatus(Enum):
+    CONFIRMED = "confirmed"
+    TENTATIVE = "tentative"
+    CANCELLED = "cancelled"
+
+
+class GoogleCalendarEventVisibility(Enum):
+    DEFAULT = "default"
+    PUBLIC = "public"
+    PRIVATE = "private"
+    CONFIDENTIAL = "confidential"
+
+
+class GoogleCalendarEventTiming(TypedDict):
+    dateTime: str  # ISO 8601
+    date: str  # ISO 8601
+    timeZone: str
+
+
+class GoogleCalendarPerson(TypedDict):
+    id: str
+    self: bool
+    displayName: str
+    email: str
+
+
+class GoogleCalendarAttendee(GoogleCalendarPerson):
+    responseStatus: str
+    comment: str
+    optional: bool
+    resource: bool
+
+
+class GoogleCalendarEvent(TypedDict):
+    start: GoogleCalendarEventTiming
+    originalStartTime: GoogleCalendarEventTiming
+    end: GoogleCalendarEventTiming
+    endTimeUnspecified: bool
+    summary: str
+    description: str
+    status: GoogleCalendarEventStatus
+    id: str
+    creator: GoogleCalendarPerson
+    organizer: GoogleCalendarPerson
+    visibility: GoogleCalendarEventVisibility
+    created: datetime.datetime
+    updated: datetime.datetime
+    htmlLink: str
+    attendees: List[GoogleCalendarAttendee]
+
 
 async def get_login_google(telegram_user_id: int, username: str):
-  # Use the credentials.json file to identify the application requesting
-  # authorization. The client ID (from that file) and access scopes are required.
-  flow = Flow.from_client_secrets_file(
-      'credentials.json',
-      scopes=['https://www.googleapis.com/auth/calendar.events'])
+    # Use the credentials.json file to identify the application requesting
+    # authorization. The client ID (from that file) and access scopes are required.
+    flow = Flow.from_client_secrets_file("credentials.json", scopes=GOOGLE_SCOPES)
 
-  # Indicate where the API server will redirect the user after the user completes
-  # the authorization flow. The redirect URI is required. The value must exactly
-  # match one of the authorized redirect URIs for the OAuth 2.0 client, which you
-  # configured in the API Console. If this value doesn't match an authorized URI,
-  # you will get a 'redirect_uri_mismatch' error.
-  flow.redirect_uri = BASE_URL + '/google_oauth_callback'
+    # Indicate where the API server will redirect the user after the user completes
+    # the authorization flow. The redirect URI is required. The value must exactly
+    # match one of the authorized redirect URIs for the OAuth 2.0 client, which you
+    # configured in the API Console. If this value doesn't match an authorized URI,
+    # you will get a 'redirect_uri_mismatch' error.
+    flow.redirect_uri = BASE_URL + "/google_oauth_callback"
 
-  # Generate URL for request to Google's OAuth 2.0 server.
-  # Use kwargs to set optional request parameters.
-  authorization_url, state = flow.authorization_url(
-      # Enable offline access so that you can refresh an access token without
-      # re-prompting the user for permission. Recommended for web server apps.
-      access_type='offline',
-      # Enable incremental authorization. Recommended as a best practice.
-      include_granted_scopes='true',
-      state=json.dumps({
-        "telegram_user_id": str(telegram_user_id),
-        "username": username
-      })
+    # Generate URL for request to Google's OAuth 2.0 server.
+    # Use kwargs to set optional request parameters.
+    authorization_url, state = flow.authorization_url(
+        # Enable offline access so that you can refresh an access token without
+        # re-prompting the user for permission. Recommended for web server apps.
+        access_type="offline",
+        # Enable incremental authorization. Recommended as a best practice.
+        include_granted_scopes="true",
+        state=json.dumps(
+            {"telegram_user_id": str(telegram_user_id), "username": username}
+        ),
     )
 
-  return authorization_url, state
+    return authorization_url, state
+
+
+def get_readable_cal_event_string(events: List[GoogleCalendarEvent]):
+    return "".join(
+        [
+            str(
+                event["summary"]
+                + " @ "
+                + datetime.datetime.strptime(
+                    event["start"]["dateTime"], "%Y-%m-%dT%H:%M:%S%z"
+                ).strftime("%H:%M %z")
+            )
+            + "\n"
+            for event in events
+        ]
+    )
+
+
+def get_calendar_events(
+    *,
+    refresh_token,
+    timeMin=datetime.datetime.utcnow().isoformat() + "Z",  # 'Z' indicates UTC time
+    timeMax=None,
+    k=10,
+):
+    """Shows basic usage of the Google Calendar API."""
+    CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
+    CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
+    creds = Credentials.from_authorized_user_info(
+        info={
+            "refresh_token": refresh_token,
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+        },
+        scopes=GOOGLE_SCOPES,
+    )
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+
+    service = build("calendar", "v3", credentials=creds)
+
+    # Call the Calendar API
+    print("Getting the upcoming k events")
+    events_result = (
+        service.events()
+        .list(
+            calendarId="primary",
+            timeMin=timeMin,
+            timeMax=timeMax,
+            maxResults=k,
+            singleEvents=True,
+            orderBy="startTime",
+        )
+        .execute()
+    )
+    events: List[GoogleCalendarEvent] = events_result.get("items", [])
+
+    if not events:
+        print("No upcoming events found.")
+        return []
+    else:
+        for event in events:
+            start = event.get("start").get("dateTime", event.get("start").get("date"))
+            if not start:
+                continue
+            else:
+                print(start, event["summary"])
+    return events
