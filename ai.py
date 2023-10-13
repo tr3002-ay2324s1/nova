@@ -36,7 +36,7 @@ def plan_tasks(telegram_user_id):
         "You are a helpful personal secretary that helps to schedule daily tasks."
     )
     tasks = fetch_tasks_formatted(telegram_user_id)
-    human_template = "These are what I want to do tomorrow, with 1 as the most important:\n{tasks}\nHelp me create a schedule for me to complete them tomorrow. Do not have to add all if there is no time. Return it in parsable JSON format containing id, task name and time slot and nothing else."
+    human_template = "These are what I want to do tomorrow, with 1 as the most important:\n{tasks}\nHelp me create a schedule for me to complete them tomorrow. Give a reasonable estimate and you do not have to add all if there is no time. Return it in parsable JSON format containing id, task name and time slot and nothing else."
     # It returns in this format:
     # {
     #     "tasks": [
