@@ -2,7 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from logger_config import configure_logger
-from database import fetch_tasks
+from database import fetch_tasks_formatted
 
 logger = configure_logger()
 
@@ -13,13 +13,10 @@ async def view_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.chat_data is not None:
         context.chat_data["state"] = "view_list"
 
-    # TODO: get list from database
+    # get list from database
     telegram_user_id = update.message.from_user.id
 
-    tasks_json = fetch_tasks(telegram_user_id)
-    tasks = ""
-    for index, task in enumerate(tasks_json):
-        tasks += str(index + 1) + ": " + task["name"] + "\n"
+    tasks = fetch_tasks_formatted(telegram_user_id)
 
     await send_message(update, context, tasks)
 

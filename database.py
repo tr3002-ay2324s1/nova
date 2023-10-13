@@ -63,6 +63,14 @@ def fetch_tasks(telegram_user_id):
     )
 
 
+def fetch_tasks_formatted(telegram_user_id):
+    tasks_json = fetch_tasks(telegram_user_id)
+    tasks = ""
+    for index, task in enumerate(tasks_json):
+        tasks += str(index + 1) + ": " + task["name"] + "\n"
+    return tasks
+
+
 def mark_task_as_added(task_id):
     supabase.table("Tasks").update({
         "added": True
