@@ -53,6 +53,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await login_start(update, context)
     elif query.data == "login_complete_yes":
         # TODO: update database that login complete
+        # Remark: We do not need to update db here because the google token will be added once they log into google cal
         return ConversationHandler.END
     elif query.data == "login_complete_no":
         telegram_user_id = query.from_user.id
@@ -96,6 +97,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         or query.data == "night_flow_new_review_time_yes"
     ):
         # TODO: update database with events completed if needed
+        # Remark: I don't think we need this for first iteration
         await night_flow_feeling(update, context)
     elif query.data == "night_flow_review_no":
         await night_flow_pick_time(update, context)
@@ -109,6 +111,8 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     elif query.data == "night_flow_next_day_schedule_edit_yes":
         # TODO: sync google calendar here
         # TODO: fetch next day data from database
+        # Remark: What do you mean fetch next day data from database? 
+        #         You mean generate the next day schedule with the tasks?
         await night_flow_next_day_schedule(update, context)
 
 
@@ -128,9 +132,11 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if state == "add_task":
         # TODO: generate task duration here
+        # Remark: I think we are skipping this for this iteration
         await task_dateline(update, context)
     elif state == "task_dateline":
         # TODO: save task here
+        # Question: How do i get the task name and description here?
         await end_add_task(update, context)
     elif state == "night_flow_feeling":
         # TODO: save night_flow_feeling here
@@ -143,6 +149,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await night_flow_improve(update, context)
     elif state == "night_flow_improve":
         # TODO: fetch next day data from database
+        # Remark: What do you mean fetch next day data from database? 
+        #         You mean generate the next day schedule with the tasks?
         await night_flow_next_day_schedule(update, context)
     elif state == "night_flow_pick_time":
         return await validate_night_flow_pick_time(update, context, text)

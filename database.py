@@ -72,4 +72,4 @@ def mark_task_as_added(task_id):
 
 
 def delete_task(task_id):
-    supabase.table("Tasks").delete().eq("task_id", task_id).execute()
+    supabase.table("Tasks").delete().eq("id", task_id).execute()
