@@ -69,6 +69,7 @@ def plan_tasks(telegram_user_id):
         ]
     )
     chain = chat_prompt | chat_model
+    ## TODO: mark task as added in database if it has been added to schedule
     return chain.invoke(
         {"tasks": tasks}
     ).content
