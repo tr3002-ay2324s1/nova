@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from task import task_dateline, end_add_task
 from job_queue import add_once_job
 from google_calendar import google_login, login_start
+from database import add_task
 from morning_flow import (
     morning_flow_event_edit,
     morning_flow_event_update,
@@ -135,8 +136,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Remark: I think we are skipping this for this iteration
         await task_dateline(update, context)
     elif state == "task_dateline":
-        # TODO: save task here
-        # Question: How do i get the task name and description here?
+        # save task here
+        add_task(telegram_user_id=update.message.from_user.id, name=text)
         await end_add_task(update, context)
     elif state == "night_flow_feeling":
         # TODO: save night_flow_feeling here
