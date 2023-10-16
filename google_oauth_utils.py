@@ -63,9 +63,21 @@ class GoogleCalendarEvent(TypedDict):
 
 
 async def get_login_google(telegram_user_id: int, username: str):
-    # Use the credentials.json file to identify the application requesting
-    # authorization. The client ID (from that file) and access scopes are required.
-    flow = Flow.from_client_secrets_file("credentials.json", scopes=GOOGLE_SCOPES)
+    flow = Flow.from_client_config(
+        client_config={
+            "web": {
+                "client_id": getenv("GOOGLE_CLIENT_ID"),
+                "project_id": "nova-401105",
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "client_secret": getenv("GOOGLE_CLIENT_SECRET"),
+                "redirect_uris": ["http://127.0.0.1:8000/google_oauth_callback"],
+                "javascript_origins": ["http://localhost:8000"],
+            }
+        },
+        scopes=GOOGLE_SCOPES,
+    )
 
     # Indicate where the API server will redirect the user after the user completes
     # the authorization flow. The redirect URI is required. The value must exactly
