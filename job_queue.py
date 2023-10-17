@@ -29,9 +29,9 @@ async def add_once_job(
 ):
     """Add a once job to the queue."""
     if due < 0:
-        await context.bot.send_message(
-            chat_id=chat_id, text="Sorry we cannot go back to future!"
-        )
+        # await context.bot.send_message(
+        #     chat_id=chat_id, text="Sorry we cannot go back to future!"
+        # )
         return
 
     job_name = f"{chat_id}_{job.__name__}_once"

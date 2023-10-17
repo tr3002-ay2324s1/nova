@@ -1,8 +1,7 @@
-import pytz
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
 from ai import plan_tasks
-from google_cal import get_calendar_events, get_login_google, refresh_daily_jobs_with_google_cal
+from google_cal import refresh_daily_jobs_with_google_cal
 
 from logger_config import configure_logger
 
@@ -10,17 +9,16 @@ logger = configure_logger()
 
 from datetime import datetime, timedelta
 
-from task import task_dateline, end_add_task
-from job_queue import add_daily_job, add_once_job
-from google_oauth_utils import google_login, login_start
-from database import add_task, fetch_user
+from task import end_add_task
+from job_queue import add_once_job
+from google_oauth_utils import login_start
+from database import add_task
 from morning_flow import (
     direct_to_google_calendar,
     morning_flow_event,
     morning_flow_event_edit,
     morning_flow_event_update,
     morning_flow_next_event,
-    morning_flow_new_task,
 )
 from night_flow import (
     night_flow_review,
@@ -61,12 +59,12 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     elif query.data == "morning_flow_events_edit":
         return ConversationHandler.END
     elif query.data == "morning_flow_event_acknowledge":
-        await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None)
+        await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None, e=morning_flow_event)
         return ConversationHandler.END
     elif query.data == "morning_flow_event_edit":
         await morning_flow_event_edit(update, context)
     elif query.data == "morning_flow_event_edit_yes":
-        await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None)
+        await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None, e=morning_flow_event)
         await morning_flow_event_update(update, context)
     elif query.data == "morning_flow_event_end_yes":
         await morning_flow_next_event(update, context)
@@ -74,7 +72,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await direct_to_google_calendar(update, context, callback="morning_flow_event_edit")
         # await morning_flow_event_edit(update, context)
     elif query.data == "morning_flow_new_task_yes":
-      await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None)
+      await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None, e=morning_flow_event)
       await morning_flow_event_update(update, context)
     elif query.data == "morning_flow_new_task_no":
         await morning_flow_event_edit(update, context)

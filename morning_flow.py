@@ -30,6 +30,7 @@ async def morning_flow_events(context: ContextTypes.DEFAULT_TYPE) -> None:
         update=None,
         user_id=context.chat_data["user_id"],
         context=context,
+        e=morning_flow_event
     )
 
     event_str = get_readable_cal_event_string(events)

@@ -15,7 +15,6 @@ from telegram.ext import ContextTypes
 from constants import BASE_URL, GOOGLE_SCOPES
 from database import fetch_user
 from job_queue import add_once_job
-from morning_flow import morning_flow_event
 
 
 class GoogleCalendarEventStatus(Enum):
@@ -226,8 +225,8 @@ def add_calendar_event(
 
     event = service.events().insert(calendarId="primary", body=event).execute()
 
-async def refresh_daily_jobs_with_google_cal(update: Optional[Update], user_id: Optional[str], context: ContextTypes.DEFAULT_TYPE):
-    users = fetch_user(telegram_user_id=(update.message.from_user.id) or user_id)
+async def refresh_daily_jobs_with_google_cal(update: Optional[Update], user_id: Optional[str], context: ContextTypes.DEFAULT_TYPE, e: any):
+    users = fetch_user(telegram_user_id=(user_id or update.message.from_user.id))
     first_user = users[0]
     refresh_token = first_user.get("google_refresh_token", "")
     # Get events from tomorrow 12am to tomorrow 11:59pm
@@ -250,6 +249,22 @@ async def refresh_daily_jobs_with_google_cal(update: Optional[Update], user_id: 
             continue
         # Calculate the time difference in seconds
         time_diff = (current_datetime - given_datetime).total_seconds()
-        chat_id = update.message.chat_id or update.effective_chat.id or -1
-        await add_once_job(job=morning_flow_event, due=time_diff, chat_id=chat_id, context=context)
+        chat_id = -1
+        if update is not None and update.message is not None:
+            chat_id = update.message.chat_id
+
+        if update is not None and update.effective_message is not None:
+            chat_id = update.effective_message.chat_id
+
+        if (
+            update is not None
+            and update.callback_query is not None
+            and update.callback_query.message is not None
+        ):
+            chat_id = update.callback_query.message.chat_id
+
+        if context.job is not None and context.job.chat_id is not None:
+            chat_id = context.job.chat_id
+        
+        await add_once_job(job=e, due=time_diff, chat_id=chat_id, context=context)
     return [e for e in events]
