@@ -37,15 +37,17 @@ async def login_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.chat_data["state"] = "login_start"
     telegram_user_id = update.message.from_user.id
 
-    users: List[dict] = fetch_user(telegram_user_id=telegram_user_id)
+    users = fetch_user(telegram_user_id=telegram_user_id)
 
     reply_markup = None
 
     if users and len(users) > 0:
         user = users[0]
         logger.info("USER: " + str(user))
-        await update.message.reply_text(
-            f"Nice to see you back {user.get('username', 'user')}"
+        await send_message(
+            update=update,
+            context=context,
+            text=f"Nice to see you back {user.get('username', 'user')}"
         )
         events = get_calendar_events(
             refresh_token=user.get("google_refresh_token", ""),
@@ -56,10 +58,12 @@ async def login_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             + "Z",
             k=30,
         )
-        logger.info("Today's schedule " + str(events))
-        await update.message.reply_text(
-            "Today's Schedule!\n\n{}".format(get_readable_cal_event_string(events))
-        )
+        no_events = "No events today!"
+        if len(events) == 0:
+            await send_message(update=update, context=context, text=no_events)
+        else:
+            logger.info("Today's schedule " + str(events))
+            await send_message(update=update, context=context, text="Today's Schedule!\n\n{}".format(get_readable_cal_event_string(events)))
     else:
         keyboard = [
             [
@@ -71,6 +75,6 @@ async def login_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await send_message(
-        update, context, "Have you signed in to google yet?", reply_markup=reply_markup
-    )
+        await send_message(
+            update, context, "Have you signed in to google yet?", reply_markup=reply_markup
+        )
