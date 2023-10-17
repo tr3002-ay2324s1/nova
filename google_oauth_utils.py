@@ -3,7 +3,7 @@ from typing import List
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from database import fetch_user
-from google_cal import get_calendar_events, get_readable_cal_event_string
+from google_cal import get_calendar_events, get_login_google, get_readable_cal_event_string
 from logger_config import configure_logger
 
 logger = configure_logger()
@@ -65,16 +65,8 @@ async def login_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.info("Today's schedule " + str(events))
             await send_message(update=update, context=context, text="Today's Schedule!\n\n{}".format(get_readable_cal_event_string(events)))
     else:
-        keyboard = [
-            [
-                InlineKeyboardButton("Yes", callback_data="login_complete_yes"),
-            ],
-            [
-                InlineKeyboardButton("No", callback_data="login_complete_no"),
-            ],
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        await send_message(
-            update, context, "Have you signed in to google yet?", reply_markup=reply_markup
+        telegram_username = update.message.from_user.username
+        url, state = await get_login_google(
+            telegram_user_id=telegram_user_id, username=telegram_username or ""
         )
+        await google_login(update, context, url, state)

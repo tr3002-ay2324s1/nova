@@ -1,5 +1,8 @@
+from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+from database import fetch_user
+from google_cal import get_calendar_events, get_readable_cal_event_string, refresh_daily_jobs_with_google_cal
 
 from logger_config import configure_logger
 
@@ -23,12 +26,14 @@ async def morning_flow_events(context: ContextTypes.DEFAULT_TYPE) -> None:
     if context.chat_data is not None:
         context.chat_data["state"] = "morning_flow_events"
 
-    # TODO: fetch data from database
-    data = "<data from database>"
+    events = await refresh_daily_jobs_with_google_cal(
+        update=None,
+        user_id=context.chat_data["user_id"],
+        context=context,
+        e=morning_flow_event
+    )
 
-    # TODO: set up job queues here
-    # for job in jobs:
-    #     await add_daily_job(job, time, days, chat_id, context)
+    event_str = get_readable_cal_event_string(events)
 
     keyboard = [
         [
@@ -42,7 +47,7 @@ async def morning_flow_events(context: ContextTypes.DEFAULT_TYPE) -> None:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await send_message(None, context, str(data), reply_markup=reply_markup)
+    await send_message(None, context, str(event_str), reply_markup=reply_markup)
 
 
 async def morning_flow_events_edit(
@@ -100,6 +105,18 @@ async def morning_flow_event_edit(
 
     await send_message(update, context, "Have you edited?", reply_markup=reply_markup)
 
+async def direct_to_google_calendar(update: Update, context: ContextTypes.DEFAULT_TYPE, callback: str) -> None:
+    if context.chat_data is not None:
+        context.chat_data["state"] = "direct_to_google_calendar"
+
+    keyboard = [
+        [
+            InlineKeyboardButton("Google Calendar", url="https://calendar.google.com/", callback_data="morning_flow_event_edit"),
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await send_message(update, context, "Go to", reply_markup=reply_markup)
 
 async def morning_flow_event_update(
     update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -173,14 +190,21 @@ async def morning_flow_check_next_task(
     if context.chat_data is not None:
         context.chat_data["state"] = "morning_flow_check_next_task"
 
-    # TODO: check database for next task
-    # Remark: I think we decided that "task" is what we want to add to the calendar,
-    #         so in this case we should fetch next event which is from google calendar
-    # if next task exists:
-    await send_message(
-        update,
-        context,
-        "You have <task> at <time> next!",
-    )
-    # else:
-    # await night_flow_review(update, context)
+    users = fetch_user(telegram_user_id=update.message.from_user.id or context.chat_data["user_id"])
+    user = users[0]
+    events = get_calendar_events(refresh_token=user.get("google_refresh_token", ""),
+                        timeMax=(
+                            datetime.utcnow() + timedelta(days=1)
+                        ).isoformat()
+                        + "Z",
+                        k=1,
+                        )
+    event_str = get_readable_cal_event_string(events)
+    if event_str:
+      await send_message(
+          update,
+          context,
+          f"You have {event_str} next!",
+      )
+    else:
+      await night_flow_review(update, context)

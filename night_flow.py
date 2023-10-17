@@ -1,12 +1,14 @@
+from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
+from database import fetch_user
+from google_cal import get_calendar_events
 
 from logger_config import configure_logger
 
 logger = configure_logger()
 
 from utils import send_message
-
 
 async def night_flow_review(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if context.chat_data is not None:
@@ -36,8 +38,6 @@ async def night_flow_feeling(
     if context.chat_data is not None:
         context.chat_data["state"] = "night_flow_feeling"
 
-    # TODO: fetch data from database
-    # Remark: Are we storing when they complete the tasks in the database?
     await send_message(
         update, context, "Today you completed tasks <a>, <b>, <c>. How are you feeling?"
     )
@@ -71,6 +71,21 @@ async def night_flow_improve(
 async def night_flow_next_day_schedule(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
+    users = fetch_user(telegram_user_id=update.message.from_user.id)
+    first_user = users[0]
+    refresh_token = first_user.get("google_refresh_token", "")
+    # Get events from tomorrow 12am to tomorrow 11:59pm
+    today = datetime.utcnow()
+    today_midnight = datetime(today.year, today.month, today.day, 0, 0)
+    events = get_calendar_events(
+        refresh_token=refresh_token,
+        timeMin=today_midnight.isoformat() + "Z",
+        timeMax=(today_midnight + timedelta(days=1)).isoformat() + "Z",
+        k=20,
+    )
+
+    event_str = "".join([f"{e.get('summary', '')} at {e.get('start', {}).get('dateTime', '')}\n" for e in events])
+
     if context.chat_data is not None:
         context.chat_data["state"] = "night_flow_next_day_schedule"
 
@@ -90,10 +105,7 @@ async def night_flow_next_day_schedule(
 
     await send_message(update, context, "Here's your schedule for tomorrow!")
 
-    # TODO: fetch data from database
-    # Remark: I think we decided that "task" is what we want to add to the calendar,
-    #         so in this case we should fetch next day event which is from google calendar
-    await send_message(update, context, "<schedule>", reply_markup=reply_markup)
+    await send_message(update, context, event_str, reply_markup=reply_markup)
 
 
 async def night_flow_pick_time(
