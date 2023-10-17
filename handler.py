@@ -4,6 +4,7 @@ from ai import plan_tasks
 from google_cal import refresh_daily_jobs_with_google_cal
 
 from logger_config import configure_logger
+from utils import send_message
 
 logger = configure_logger()
 
@@ -55,9 +56,10 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await login_start(update, context)
     if query.data == "morning_flow_events_acknowledge":
         # save morning_flow_events_acknowledge here - not mvp
+        await send_message(update=update, context=context, text="Great!")
         return ConversationHandler.END
     elif query.data == "morning_flow_events_edit":
-        return ConversationHandler.END
+        await direct_to_google_calendar(update, context, callback="morning_flow_events_edit_2")
     elif query.data == "morning_flow_event_acknowledge":
         await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None, e=morning_flow_event)
         return ConversationHandler.END
@@ -70,10 +72,9 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await morning_flow_next_event(update, context)
     elif query.data == "morning_flow_event_end_no":
         await direct_to_google_calendar(update, context, callback="morning_flow_event_edit")
-        # await morning_flow_event_edit(update, context)
     elif query.data == "morning_flow_new_task_yes":
-      await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None, e=morning_flow_event)
-      await morning_flow_event_update(update, context)
+        await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None, e=morning_flow_event)
+        await morning_flow_event_update(update, context)
     elif query.data == "morning_flow_new_task_no":
         await morning_flow_event_edit(update, context)
     elif (
