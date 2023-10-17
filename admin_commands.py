@@ -6,7 +6,7 @@ from logger_config import configure_logger
 logger = configure_logger()
 
 from utils import send_message
-from google_calendar import login_start
+from google_oauth_utils import login_start
 from job_queue import add_daily_job
 from morning_flow import morning_flow_greeting
 from datetime import time

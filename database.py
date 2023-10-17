@@ -1,5 +1,6 @@
 import os
-from supabase import create_client
+from typing import List, TypedDict
+from supabase.client import create_client
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,18 +13,27 @@ if not API_URL or not API_KEY:
 
 supabase = create_client(API_URL, API_KEY)
 
+
+class User(TypedDict):
+    telegram_user_id: int
+    username: str
+    name: str
+    email: str
+    google_refresh_token: str
+
+
 def add_user(telegram_user_id, username, name, google_refresh_token, email=""):
-    data = {
+    data: User = {
         "telegram_user_id": telegram_user_id,
         "username": username,
         "name": name,
         "email": email,
         "google_refresh_token": google_refresh_token,
     }
-    supabase.table("Users").insert(data).execute()
+    supabase.table("Users").insert(dict(data)).execute()
 
 
-def fetch_user(telegram_user_id):
+def fetch_user(telegram_user_id) -> List[User]:
     return (
         supabase.table("Users")
         .select("*")
@@ -47,7 +57,7 @@ def add_task(telegram_user_id, name, description=""):
     data = {
         "telegram_user_id": telegram_user_id,
         "name": name,
-        "description": description
+        "description": description,
     }
     supabase.table("Tasks").insert(data).execute()
 
@@ -62,8 +72,14 @@ def fetch_tasks(telegram_user_id):
         .data
     )
 
-
 def fetch_tasks_formatted(telegram_user_id):
+    tasks_json = fetch_tasks(telegram_user_id)
+    tasks = ""
+    for task in tasks_json:
+        tasks += str(task["id"]) + ": " + task["name"] + "\n"
+    return tasks
+
+def fetch_tasks_and_id_formatted(telegram_user_id):
     tasks_json = fetch_tasks(telegram_user_id)
     tasks = ""
     for index, task in enumerate(tasks_json):
@@ -72,11 +88,7 @@ def fetch_tasks_formatted(telegram_user_id):
 
 
 def mark_task_as_added(task_id):
-    supabase.table("Tasks").update({
-        "added": True
-    }).eq(
-        "id", task_id
-    ).execute()
+    supabase.table("Tasks").update({"added": True}).eq("id", task_id).execute()
 
 
 def delete_task(task_id):

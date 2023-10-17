@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
-from google_oauth_utils import get_login_google
+from google_cal import get_login_google
 
 from logger_config import configure_logger
 
@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 from task import task_dateline, end_add_task
 from job_queue import add_once_job
-from google_calendar import google_login, login_start
+from google_oauth_utils import google_login, login_start
 from database import add_task
 from morning_flow import (
     morning_flow_event_edit,
@@ -112,7 +112,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     elif query.data == "night_flow_next_day_schedule_edit_yes":
         # TODO: sync google calendar here
         # TODO: fetch next day data from database
-        # Remark: What do you mean fetch next day data from database? 
+        # Remark: What do you mean fetch next day data from database?
         #         You mean generate the next day schedule with the tasks?
         await night_flow_next_day_schedule(update, context)
 
@@ -150,7 +150,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await night_flow_improve(update, context)
     elif state == "night_flow_improve":
         # TODO: fetch next day data from database
-        # Remark: What do you mean fetch next day data from database? 
+        # Remark: What do you mean fetch next day data from database?
         #         You mean generate the next day schedule with the tasks?
         await night_flow_next_day_schedule(update, context)
     elif state == "night_flow_pick_time":
