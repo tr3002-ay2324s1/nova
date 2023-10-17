@@ -153,7 +153,7 @@ def get_calendar_events(
             singleEvents=True,
             orderBy="startTime",
             timeZone="America/New_York",
-        )
+        ) 
         .execute()
     )
     events: List[GoogleCalendarEvent] = events_result.get("items", [])
