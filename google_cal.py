@@ -115,7 +115,7 @@ def get_readable_cal_event_string(events: Sequence[GoogleCalendarEvent]):
                 + " @ "
                 + datetime.strptime(
                     event["start"]["dateTime"], "%Y-%m-%dT%H:%M:%S%z"
-                ).strftime("%H:%M %z")
+                ).strftime("%H:%M")
             )
             + "\n"
             for event in events

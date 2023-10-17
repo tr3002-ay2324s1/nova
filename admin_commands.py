@@ -24,7 +24,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if update.message is not None:
         await add_daily_job(
-            morning_flow_greeting, time(0, 50), update.message.chat_id, context
+            morning_flow_greeting, time(8, 0), update.message.chat_id, context
         )
 
     await send_message(
