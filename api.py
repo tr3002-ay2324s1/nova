@@ -4,7 +4,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from os import environ
 import json
 import google_auth_oauthlib.flow
-from constants import BASE_URL
+from constants import BASE_URL, GOOGLE_SCOPES
 from database import add_user
 import logging
 
@@ -67,7 +67,7 @@ async def google_oauth_callback(request: Request, response: Response):
                 "javascript_origins": ["http://localhost:8000"],
             }
         },
-        scopes=["https://www.googleapis.com/auth/calendar.events"],
+        scopes=GOOGLE_SCOPES,
         state=state,
     )
     flow.redirect_uri = BASE_URL + "/google_oauth_callback"
