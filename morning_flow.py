@@ -174,6 +174,8 @@ async def morning_flow_check_next_task(
         context.chat_data["state"] = "morning_flow_check_next_task"
 
     # TODO: check database for next task
+    # Remark: I think we decided that "task" is what we want to add to the calendar,
+    #         so in this case we should fetch next event which is from google calendar
     # if next task exists:
     await send_message(
         update,

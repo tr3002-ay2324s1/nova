@@ -37,7 +37,7 @@ async def night_flow_feeling(
         context.chat_data["state"] = "night_flow_feeling"
 
     # TODO: fetch data from database
-
+    # Remark: Are we storing when they complete the tasks in the database?
     await send_message(
         update, context, "Today you completed tasks <a>, <b>, <c>. How are you feeling?"
     )
@@ -91,7 +91,8 @@ async def night_flow_next_day_schedule(
     await send_message(update, context, "Here's your schedule for tomorrow!")
 
     # TODO: fetch data from database
-
+    # Remark: I think we decided that "task" is what we want to add to the calendar,
+    #         so in this case we should fetch next day event which is from google calendar
     await send_message(update, context, "<schedule>", reply_markup=reply_markup)
 
 
