@@ -35,7 +35,7 @@ def time_slot_to_datetime(time_slot):
 
 
 def generate_schedule_from_hobby(hobby, number_of_sessions):
-    # TODO: Improve the templates in the future
+    # Improve the templates in the future -- not mvp
     template = (
         "You are a helpful personal secretary that helps to schedule daily tasks."
     )
@@ -159,6 +159,3 @@ def plan_tasks(telegram_user_id):
         for task in tasks:
             mark_task_as_added(task["id"])
             print(f"Marked added {task['id']}")
-
-
-print(plan_tasks(873852340))

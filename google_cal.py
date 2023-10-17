@@ -1,14 +1,21 @@
 from enum import Enum
-from typing import Dict, List, Optional, Type, TypedDict, Union
+from typing import Dict, List, Optional, Sequence, Type, TypedDict, Union
 from google_auth_oauthlib.flow import Flow
-import datetime
+from datetime import timedelta, datetime
 from os import getenv
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import json
+import pytz
+
+from telegram import Update
+from telegram.ext import ContextTypes
 
 from constants import BASE_URL, GOOGLE_SCOPES
+from database import fetch_user
+from job_queue import add_once_job
+from morning_flow import morning_flow_event
 
 
 class GoogleCalendarEventStatus(Enum):
@@ -56,8 +63,8 @@ class GoogleCalendarEvent(TypedDict):
     creator: GoogleCalendarPerson
     organizer: GoogleCalendarPerson
     visibility: GoogleCalendarEventVisibility
-    created: datetime.datetime
-    updated: datetime.datetime
+    created: datetime
+    updated: datetime
     htmlLink: str
     attendees: List[GoogleCalendarAttendee]
 
@@ -101,13 +108,13 @@ async def get_login_google(telegram_user_id: int, username: str):
 
     return authorization_url, state
 
-def get_readable_cal_event_string(events: List[GoogleCalendarEvent]):
+def get_readable_cal_event_string(events: Sequence[GoogleCalendarEvent]):
     return "".join(
         [
             str(
                 event["summary"]
                 + " @ "
-                + datetime.datetime.strptime(
+                + datetime.strptime(
                     event["start"]["dateTime"], "%Y-%m-%dT%H:%M:%S%z"
                 ).strftime("%H:%M %z")
             )
@@ -119,7 +126,7 @@ def get_readable_cal_event_string(events: List[GoogleCalendarEvent]):
 def get_calendar_events(
     *,
     refresh_token,
-    timeMin=datetime.datetime.utcnow().isoformat() + "Z",  # 'Z' indicates UTC time
+    timeMin=datetime.utcnow().isoformat() + "Z",  # 'Z' indicates UTC time
     timeMax=None,
     k=10,
 ):  # -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:
@@ -179,8 +186,8 @@ def add_calendar_event(
     *,
     refresh_token,
     summary,
-    start_time: datetime.datetime,
-    end_time: datetime.datetime,
+    start_time: datetime,
+    end_time: datetime,
 ):
     CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
     CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
@@ -218,3 +225,31 @@ def add_calendar_event(
     }
 
     event = service.events().insert(calendarId="primary", body=event).execute()
+
+async def refresh_daily_jobs_with_google_cal(update: Optional[Update], user_id: Optional[str], context: ContextTypes.DEFAULT_TYPE):
+    users = fetch_user(telegram_user_id=(update.message.from_user.id) or user_id)
+    first_user = users[0]
+    refresh_token = first_user.get("google_refresh_token", "")
+    # Get events from tomorrow 12am to tomorrow 11:59pm
+    today = datetime.utcnow()
+    today_midnight = datetime(today.year, today.month, today.day, 0, 0)
+    events = get_calendar_events(
+        refresh_token=refresh_token,
+        timeMin=today_midnight.isoformat() + "Z",
+        timeMax=(today_midnight + timedelta(days=1)).isoformat() + "Z",
+        k=20,
+    )
+    for e in events:
+        # Create a datetime object for the current datetime
+        current_datetime = datetime.now(tz=pytz.timezone("America/New_York"))
+        # Create a datetime object for the given datetime
+        if e.get("start").get("date"):
+            continue
+        given_datetime = datetime.fromisoformat(e.get("start").get("dateTime", ""))
+        if not given_datetime:
+            continue
+        # Calculate the time difference in seconds
+        time_diff = (current_datetime - given_datetime).total_seconds()
+        chat_id = update.message.chat_id or update.effective_chat.id or -1
+        await add_once_job(job=morning_flow_event, due=time_diff, chat_id=chat_id, context=context)
+    return [e for e in events]

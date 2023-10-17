@@ -1,6 +1,8 @@
+import pytz
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
-from google_cal import get_login_google
+from ai import plan_tasks
+from google_cal import get_calendar_events, get_login_google, refresh_daily_jobs_with_google_cal
 
 from logger_config import configure_logger
 
@@ -9,10 +11,12 @@ logger = configure_logger()
 from datetime import datetime, timedelta
 
 from task import task_dateline, end_add_task
-from job_queue import add_once_job
+from job_queue import add_daily_job, add_once_job
 from google_oauth_utils import google_login, login_start
-from database import add_task
+from database import add_task, fetch_user
 from morning_flow import (
+    direct_to_google_calendar,
+    morning_flow_event,
     morning_flow_event_edit,
     morning_flow_event_update,
     morning_flow_next_event,
@@ -31,7 +35,6 @@ from night_flow import (
     night_flow_end,
     night_flow_next_day_schedule_edit,
 )
-
 
 async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -52,53 +55,33 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     # first_time
     if query.data == "google_login":
         await login_start(update, context)
-    elif query.data == "login_complete_yes":
-        # TODO: update database that login complete
-        # Remark: We do not need to update db here because the google token will be added once they log into google cal
-        return ConversationHandler.END
-    elif query.data == "login_complete_no":
-        telegram_user_id = query.from_user.id
-        telegram_username = query.from_user.username
-        url, state = await get_login_google(
-            telegram_user_id=telegram_user_id, username=telegram_username or ""
-        )
-        await google_login(update, context, url, state)
-
     if query.data == "morning_flow_events_acknowledge":
-        # TODO: save morning_flow_events_acknowledge here
+        # save morning_flow_events_acknowledge here - not mvp
         return ConversationHandler.END
     elif query.data == "morning_flow_events_edit":
-        # TODO: sync google calendar here
-        # TODO: update daily job here
         return ConversationHandler.END
     elif query.data == "morning_flow_event_acknowledge":
-        # TODO: add daily job here
+        await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None)
         return ConversationHandler.END
     elif query.data == "morning_flow_event_edit":
-        # TODO: direct to google calendar here
         await morning_flow_event_edit(update, context)
     elif query.data == "morning_flow_event_edit_yes":
-        # TODO: sync google calendar here
-        # TODO: update daily job here
+        await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None)
         await morning_flow_event_update(update, context)
     elif query.data == "morning_flow_event_end_yes":
         await morning_flow_next_event(update, context)
     elif query.data == "morning_flow_event_end_no":
-        # TODO: generate next potential task timing here
-        await morning_flow_new_task(update, context)
+        await direct_to_google_calendar(update, context, callback="morning_flow_event_edit")
+        # await morning_flow_event_edit(update, context)
     elif query.data == "morning_flow_new_task_yes":
-        # TODO: update new task in google calendar
-        # TODO: update daily job here
-        await morning_flow_event_update(update, context)
+      await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None)
+      await morning_flow_event_update(update, context)
     elif query.data == "morning_flow_new_task_no":
-        # TODO: direct to google ecalendar here
         await morning_flow_event_edit(update, context)
     elif (
         query.data == "night_flow_review_yes"
         or query.data == "night_flow_new_review_time_yes"
     ):
-        # TODO: update database with events completed if needed
-        # Remark: I don't think we need this for first iteration
         await night_flow_feeling(update, context)
     elif query.data == "night_flow_review_no":
         await night_flow_pick_time(update, context)
@@ -107,13 +90,11 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     elif query.data == "night_flow_next_day_schedule_ok":
         await night_flow_end(update, context)
     elif query.data == "night_flow_next_day_schedule_edit":
-        # TODO: direct to google calendar here
+        await direct_to_google_calendar(update, context, callback="night_flow_next_day_schedule_edit_2")
+    elif query.data == "night_flow_next_day_schedule_edit_2":
         await night_flow_next_day_schedule_edit(update, context)
     elif query.data == "night_flow_next_day_schedule_edit_yes":
-        # TODO: sync google calendar here
-        # TODO: fetch next day data from database
-        # Remark: What do you mean fetch next day data from database?
-        #         You mean generate the next day schedule with the tasks?
+        plan_tasks(telegram_user_id=query.from_user.id)
         await night_flow_next_day_schedule(update, context)
 
 
@@ -132,26 +113,18 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("state: " + str(state))
 
     if state == "add_task":
-        # TODO: generate task duration here
-        # Remark: I think we are skipping this for this iteration
-        await task_dateline(update, context)
-    elif state == "task_dateline":
-        # save task here
         add_task(telegram_user_id=update.message.from_user.id, name=text)
         await end_add_task(update, context)
     elif state == "night_flow_feeling":
-        # TODO: save night_flow_feeling here
+        # save night_flow_feeling here -- not mvp
         await night_flow_favourite(update, context)
     elif state == "night_flow_favourite":
-        # TODO: save night_flow_favourite here
+        # save night_flow_favourite here -- not mvp
         await night_flow_proud(update, context)
     elif state == "night_flow_proud":
-        # TODO: save night_flow_proud here
+        # save night_flow_proud here -- not mvp
         await night_flow_improve(update, context)
     elif state == "night_flow_improve":
-        # TODO: fetch next day data from database
-        # Remark: What do you mean fetch next day data from database?
-        #         You mean generate the next day schedule with the tasks?
         await night_flow_next_day_schedule(update, context)
     elif state == "night_flow_pick_time":
         return await validate_night_flow_pick_time(update, context, text)

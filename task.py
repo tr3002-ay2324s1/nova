@@ -15,15 +15,15 @@ async def add_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_message(update, context, "What is the name of the task?")
 
 
-async def task_dateline(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.chat_data is not None:
-        context.chat_data["state"] = "task_dateline"
+# async def task_dateline(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     if context.chat_data is not None:
+#         context.chat_data["state"] = "task_dateline"
 
-    await send_message(
-        update,
-        context,
-        "When would you like to complete this task by? (answer in MDYY format e.g. 1121 for 1 Jan 2021 and 111122 for 11 Nov 2022)",
-    )
+#     await send_message(
+#         update,
+#         context,
+#         "When would you like to complete this task by? (answer in MDYY format e.g. 1121 for 1 Jan 2021 and 111122 for 11 Nov 2022)",
+#     )
 
 
 async def end_add_task(update: Update, context: ContextTypes.DEFAULT_TYPE):
