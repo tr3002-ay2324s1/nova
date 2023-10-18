@@ -1,3 +1,4 @@
+from functools import wraps
 from telegram import (
     Update,
     InlineKeyboardMarkup,
@@ -10,6 +11,21 @@ from telegram.ext import ContextTypes
 from logger_config import configure_logger
 
 logger = configure_logger()
+
+
+def update_chat_data_state(func):
+    @wraps(func)
+    async def wrapper(
+        update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs
+    ):
+        if context.chat_data is None:
+            logger.error(f"context.chat_data is None for {func.__name__}")
+            await send_on_error_message(context)
+            return
+        context.chat_data["state"] = func.__name__
+        return await func(update, context, *args, **kwargs)
+
+    return wrapper
 
 
 async def send_message(
@@ -45,3 +61,11 @@ async def send_message(
             reply_markup=reply_markup,
         )
         return
+
+
+async def send_on_error_message(context: ContextTypes.DEFAULT_TYPE) -> None:
+    await send_message(
+        update=None,
+        context=context,
+        text="Something went wrong. Please try again later or contact @juliussneezer04 for help!",
+    )

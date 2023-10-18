@@ -72,12 +72,14 @@ def fetch_tasks(telegram_user_id):
         .data
     )
 
+
 def fetch_tasks_formatted(telegram_user_id):
     tasks_json = fetch_tasks(telegram_user_id)
     tasks = ""
     for task in tasks_json:
         tasks += str(task["id"]) + ": " + task["name"] + "\n"
     return tasks
+
 
 def fetch_tasks_and_id_formatted(telegram_user_id):
     tasks_json = fetch_tasks(telegram_user_id)
