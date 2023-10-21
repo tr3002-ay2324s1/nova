@@ -23,7 +23,22 @@ def update_chat_data_state(func):
             await send_on_error_message(context)
             return
         context.chat_data["state"] = func.__name__
+
         return await func(update, context, *args, **kwargs)
+
+    return wrapper
+
+
+def update_chat_data_state_context(func):
+    @wraps(func)
+    async def wrapper(context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
+        if context.chat_data is None:
+            logger.error(f"context.chat_data is None for {func.__name__}")
+            await send_on_error_message(context)
+            return
+        context.chat_data["state"] = func.__name__
+
+        return await func(context, *args, **kwargs)
 
     return wrapper
 

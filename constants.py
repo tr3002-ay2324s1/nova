@@ -18,4 +18,4 @@ BASE_URL = (
 )
 GOOGLE_SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 
-MORNING_FLOW_TIME = (8, 0)  # (hour, minute)
+MORNING_FLOW_TIME = (23, 43)  # (hour, minute)

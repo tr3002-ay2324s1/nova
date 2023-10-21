@@ -309,23 +309,26 @@ async def refresh_daily_jobs_with_google_cal(
     refresh_token = first_user.get("google_refresh_token", "")
 
     # Get events from tomorrow 12am to tomorrow 11:59pm
-    today = datetime.utcnow()
-    today_midnight = datetime(today.year, today.month, today.day, 0, 0)
+    today = datetime.now(
+        tz=pytz.timezone("America/New_York")
+        )
+    today_midnight = datetime(today.year, today.month, today.day, 23, 30)
     events = get_calendar_events(
         refresh_token=refresh_token,
         timeMin=today_midnight.isoformat() + "Z",
         timeMax=(today_midnight + timedelta(days=1)).isoformat() + "Z",
         k=20,
     )
+    logger.info("refreshed cal", events)
     for event in events:
         # Create a datetime object for the current datetime
         current_datetime = datetime.now(tz=pytz.timezone("America/New_York"))
         # Create a datetime object for the given datetime
-        if event.get("start").get("date"):
+        if not event.get("start").get("dateTime", False):
             # Skip all-day events
             continue
         given_datetime = datetime.fromisoformat(
-            get_next_event_job.get("start").get("dateTime", "")
+            event.get("start").get("dateTime", "")
         )
         if not given_datetime:
             continue

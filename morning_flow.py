@@ -15,19 +15,19 @@ from logger_config import configure_logger
 
 logger = configure_logger()
 
-from utils import send_message, send_on_error_message, update_chat_data_state
+from utils import send_message, send_on_error_message, update_chat_data_state, update_chat_data_state_context
 
 from night_flow import night_flow_review
 
 
-@update_chat_data_state
+@update_chat_data_state_context
 async def morning_flow_greeting(context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_message(None, context, "Good morning! Here's how your day looks like:")
 
     await morning_flow_schedule(context)
 
 
-@update_chat_data_state
+@update_chat_data_state_context
 async def morning_flow_schedule(context: ContextTypes.DEFAULT_TYPE) -> None:
     if context.chat_data is None:
         logger.error("context.chat_data is None for morning_flow_events")
@@ -75,7 +75,7 @@ async def morning_flow_schedule_edit_acknowledge(
 def morning_flow_event(
     time_of_event: datetime, event_desc: str, end_time_of_event: Optional[datetime]
 ):  # -> Callable[..., Coroutine[Any, Any, None]]:
-    @update_chat_data_state
+    @update_chat_data_state_context
     async def morning_flow_event_helper(context: ContextTypes.DEFAULT_TYPE) -> None:
         if context.chat_data is None or not context.chat_data:
             logger.error("context.chat_data is None for morning_flow_event_helper")
@@ -191,7 +191,9 @@ async def event_flow_reschedule(
     time_slot = await find_next_available_time_slot(
         refresh_token=user.get("google_refresh_token", ""),
         events=events,
-        event_duration_minutes=ceil((end_datetime - datetime.utcnow()).total_seconds() // 60)
+        event_duration_minutes=ceil(
+            (end_datetime - datetime.utcnow()).total_seconds() // 60
+        ),
     )
     if time_slot is None:
         await send_message(
@@ -203,13 +205,13 @@ async def event_flow_reschedule(
     time_slot_str = time_slot.strftime("%I:%M%p")
     context.chat_data["state"] = time_slot.isoformat()
     keyboard = [
-            [
-                InlineKeyboardButton("Yes", callback_data="morning_flow_new_task_yes"),
-            ],
-            [
-                InlineKeyboardButton("No", callback_data="morning_flow_new_task_no"),
-            ],
-        ]
+        [
+            InlineKeyboardButton("Yes", callback_data="morning_flow_new_task_yes"),
+        ],
+        [
+            InlineKeyboardButton("No", callback_data="morning_flow_new_task_no"),
+        ],
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await send_message(
