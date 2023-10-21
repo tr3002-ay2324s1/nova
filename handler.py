@@ -4,11 +4,12 @@ from ai import plan_tasks
 from google_cal import refresh_daily_jobs_with_google_cal
 
 from logger_config import configure_logger
-from utils import send_message
+from utils import send_message, send_on_error_message
 
 logger = configure_logger()
 
 from datetime import datetime, timedelta
+import datetime as dt
 
 from task import end_add_task
 from job_queue import add_once_job
@@ -16,10 +17,13 @@ from google_oauth_utils import login_start
 from database import add_task
 from morning_flow import (
     direct_to_google_calendar,
+    morning_flow_check_next_task,
     morning_flow_event,
-    morning_flow_event_edit,
+    event_flow_edit,
+    morning_flow_event_end,
     morning_flow_event_update,
     morning_flow_next_event,
+    morning_flow_schedule_edit_acknowledge,
 )
 from night_flow import (
     night_flow_review,
@@ -34,6 +38,7 @@ from night_flow import (
     night_flow_end,
     night_flow_next_day_schedule_edit,
 )
+
 
 async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -54,29 +59,68 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     # first_time
     if query.data == "google_login":
         await login_start(update, context)
-    if query.data == "morning_flow_events_acknowledge":
-        # save morning_flow_events_acknowledge here - not mvp
+
+    # morning_flow
+    if query.data == "morning_flow_schedule_acknowledge":
         await send_message(update=update, context=context, text="Great!")
         return ConversationHandler.END
-    elif query.data == "morning_flow_events_edit":
-        await direct_to_google_calendar(update, context, callback="morning_flow_events_edit_2")
-    elif query.data == "morning_flow_event_acknowledge":
-        await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None, e=morning_flow_event)
+    elif query.data == "morning_flow_schedule_edit":
+        await direct_to_google_calendar(
+            update, context, callback_data="morning_flow_schedule_acknowledge"
+        )
+    elif query.data == "morning_flow_schedule_edit_acknowledge":
+        await morning_flow_schedule_edit_acknowledge(update, context)
+
+    # event_flow
+    elif query.data == "event_flow_acknowledge":
+        end_datetime: datetime | None = (
+            datetime.fromisoformat(context.chat_data["state"])
+            if context.chat_data
+            and "state" in context.chat_data
+            and context.chat_data["state"]
+            else None
+        )
+        chat_id = (
+            context.chat_data["chat_id"]
+            if context.chat_data and "chat_id" in context.chat_data
+            else -1
+        )
+        await add_once_job(
+            job=morning_flow_event_end,
+            context=context,
+            chat_id=chat_id,
+            due=(end_datetime - datetime.now()).total_seconds()
+            if end_datetime and (end_datetime - datetime.now()).total_seconds() > 0
+            else 0,
+        )
         return ConversationHandler.END
-    elif query.data == "morning_flow_event_edit":
-        await morning_flow_event_edit(update, context)
-    elif query.data == "morning_flow_event_edit_yes":
-        await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None, e=morning_flow_event)
-        await morning_flow_event_update(update, context)
+    elif query.data == "event_flow_edit":
+        await direct_to_google_calendar(
+            update, context, callback_data="event_flow_edit_acknowledge"
+        )
+    elif query.data == "event_flow_edit_acknowledge":
+        await event_flow_edit(update, context)
+    elif query.data == "event_flow_edit_acknowledge_yes":
+        await refresh_daily_jobs_with_google_cal(
+            context=context, get_next_event_job=morning_flow_event
+        )
+        await morning_flow_check_next_task(update, context)
     elif query.data == "morning_flow_event_end_yes":
         await morning_flow_next_event(update, context)
     elif query.data == "morning_flow_event_end_no":
-        await direct_to_google_calendar(update, context, callback="morning_flow_event_edit")
+        await direct_to_google_calendar(
+            update, context, callback_data="event_flow_edit"
+        )
     elif query.data == "morning_flow_new_task_yes":
-        await refresh_daily_jobs_with_google_cal(update=update, context=context, user_id=None, e=morning_flow_event)
+        # next_time_to_add = 
+        await refresh_daily_jobs_with_google_cal(
+            context=context, get_next_event_job=morning_flow_event
+        )
         await morning_flow_event_update(update, context)
     elif query.data == "morning_flow_new_task_no":
-        await morning_flow_event_edit(update, context)
+        await event_flow_edit(update, context)
+
+    # night_flow
     elif (
         query.data == "night_flow_review_yes"
         or query.data == "night_flow_new_review_time_yes"
@@ -89,7 +133,9 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     elif query.data == "night_flow_next_day_schedule_ok":
         await night_flow_end(update, context)
     elif query.data == "night_flow_next_day_schedule_edit":
-        await direct_to_google_calendar(update, context, callback="night_flow_next_day_schedule_edit_2")
+        await direct_to_google_calendar(
+            update, context, callback_data="night_flow_next_day_schedule_edit_2"
+        )
     elif query.data == "night_flow_next_day_schedule_edit_2":
         await night_flow_next_day_schedule_edit(update, context)
     elif query.data == "night_flow_next_day_schedule_edit_yes":
@@ -112,6 +158,15 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("state: " + str(state))
 
     if state == "add_task":
+        if update.message is None:
+            logger.info("handle_text: None " + str(update))
+            await send_on_error_message(context)
+            return
+        if update.message.from_user is None:
+            logger.info("handle_text: None " + str(update))
+            await send_on_error_message(context)
+            return
+
         add_task(telegram_user_id=update.message.from_user.id, name=text)
         await end_add_task(update, context)
     elif state == "night_flow_feeling":
@@ -159,6 +214,7 @@ async def validate_night_flow_pick_time(
 
             if update.effective_chat is None:
                 logger.info("update.effective_chat: None")
+                await send_on_error_message(context)
                 return
 
             await add_once_job(

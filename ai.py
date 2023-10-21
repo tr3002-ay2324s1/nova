@@ -1,10 +1,11 @@
 import os
+from typing import List
 from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
 from langchain.schema import HumanMessage
 from langchain.prompts.chat import ChatPromptTemplate
 from database import fetch_tasks_formatted, fetch_user, mark_task_as_added
-from google_cal import add_calendar_event, get_calendar_events
+from google_cal import GoogleCalendarEvent, add_calendar_event, get_calendar_events, get_readable_cal_event_string
 from datetime import datetime, timedelta, date
 from json import dumps, loads
 
@@ -50,7 +51,6 @@ def generate_schedule_from_hobby(hobby, number_of_sessions):
     return chain.invoke(
         {"hobby": hobby, "number_of_sessions": number_of_sessions}
     ).content
-
 
 def plan_tasks(telegram_user_id):
     users = fetch_user(telegram_user_id=telegram_user_id)
@@ -144,7 +144,9 @@ def plan_tasks(telegram_user_id):
     if tasks:
         # add to calendar
         for task in tasks:
-            task_desc = task.get('task', task.get('description', task.get('task_name', '')))
+            task_desc = task.get(
+                "task", task.get("description", task.get("task_name", ""))
+            )
             print(f"Adding {task_desc} to calendar")
             # Split the time_slot into start and end times
             time_slot = task["time_slot"]

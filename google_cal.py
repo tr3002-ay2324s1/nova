@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, List, Optional, Sequence, Type, TypedDict, Union
+from typing import Any, Callable, Coroutine, List, Optional, Sequence, TypedDict, Union
 from google_auth_oauthlib.flow import Flow
 from datetime import timedelta, datetime
 from os import getenv
@@ -8,13 +8,14 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import json
 import pytz
-
-from telegram import Update
 from telegram.ext import ContextTypes
-
+from logger_config import configure_logger
 from constants import BASE_URL, GOOGLE_SCOPES
 from database import fetch_user
 from job_queue import add_once_job
+from utils import send_on_error_message
+
+logger = configure_logger()
 
 
 class GoogleCalendarEventStatus(Enum):
@@ -68,6 +69,10 @@ class GoogleCalendarEvent(TypedDict):
     attendees: List[GoogleCalendarAttendee]
 
 
+class GoogleCalendarGetEventsResponse(TypedDict):
+    items: List[GoogleCalendarEvent]
+
+
 async def get_login_google(telegram_user_id: int, username: str):
     flow = Flow.from_client_config(
         client_config={
@@ -107,20 +112,30 @@ async def get_login_google(telegram_user_id: int, username: str):
 
     return authorization_url, state
 
+
 def get_readable_cal_event_string(events: Sequence[GoogleCalendarEvent]):
     return "".join(
         [
-            str(
-                event["summary"]
-                + " @ "
-                + datetime.strptime(
-                    event["start"]["dateTime"], "%Y-%m-%dT%H:%M:%S%z"
-                ).strftime("%H:%M")
+            (
+                str(
+                    event.get("summary")
+                    + " @ "
+                    + datetime.strptime(
+                        event.get("start").get(
+                            "dateTime",
+                            "",  # Guaranteed not to happen because of if else
+                        ),
+                        "%Y-%m-%dT%H:%M:%S%z",
+                    ).strftime("%H:%M")
+                )
+                + "\n"
             )
-            + "\n"
+            if "start" in event and "dateTime" in event.get("start")
+            else ""
             for event in events
         ]
     )
+
 
 def get_calendar_events(
     *,
@@ -128,7 +143,9 @@ def get_calendar_events(
     timeMin=datetime.utcnow().isoformat() + "Z",  # 'Z' indicates UTC time
     timeMax=None,
     k=10,
-):  # -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:
+) -> List[
+    GoogleCalendarEvent
+]:  # -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:
     """Shows basic usage of the Google Calendar API."""
     CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
     CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
@@ -148,8 +165,8 @@ def get_calendar_events(
     service = build("calendar", "v3", credentials=creds)
 
     # Call the Calendar API
-    print("Getting the upcoming k events")
-    events_result = (
+    print(f"Getting the upcoming {k} events")
+    events_result: GoogleCalendarGetEventsResponse = (
         service.events()
         .list(
             calendarId="primary",
@@ -159,27 +176,17 @@ def get_calendar_events(
             singleEvents=True,
             orderBy="startTime",
             timeZone="America/New_York",
-        ) 
+        )
         .execute()
     )
-    events: List[GoogleCalendarEvent] = events_result.get("items", [])
+    events: Union[List[GoogleCalendarEvent], None] = events_result.get("items", [])
 
-    if not events:
+    if events is None or type(events) is not list:
         print("No upcoming events found.")
         return []
     else:
-        for event in events:
-            start = event.get("start").get("dateTime", event.get("start").get("date"))
-            end = (
-                event.get("end").get("dateTime", event.get("end").get("date"))
-                if not event.get("endTimeUnspecified", False)
-                else None
-            )
-            if not start:
-                continue
-            else:
-                print(start, end, event["summary"])
-    return events
+        return events
+
 
 def add_calendar_event(
     *,
@@ -210,7 +217,7 @@ def add_calendar_event(
         "timeZone": "America/New_York",
         "dateTime": start_time.isoformat(),
     }
-    print("START",start_obj)
+    print("START", start_obj)
     end_obj = {
         # "date": end_time.date().isoformat(),
         "timeZone": "America/New_York",
@@ -225,46 +232,117 @@ def add_calendar_event(
 
     event = service.events().insert(calendarId="primary", body=event).execute()
 
-async def refresh_daily_jobs_with_google_cal(update: Optional[Update], user_id: Optional[str], context: ContextTypes.DEFAULT_TYPE, e: any):
-    users = fetch_user(telegram_user_id=(user_id or update.message.from_user.id))
+async def find_next_available_time_slot(
+        refresh_token: str,
+        events: Sequence[GoogleCalendarEvent],
+        event_duration_minutes: int,
+):
+    CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
+    CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
+    creds = Credentials.from_authorized_user_info(
+        info={
+            "refresh_token": refresh_token,
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+        },
+        scopes=GOOGLE_SCOPES,
+    )
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+    service = build('calendar', 'v3', credentials=creds)
+
+    # Get the current date and time
+    current_datetime = datetime.now(tz=pytz.timezone("America/New_York"))
+    current_date = current_datetime.date()
+    end_of_day = datetime.combine(current_date, datetime.time(datetime(year=current_date.year, month=current_date.month, day=current_date.day,hour=23, minute=59, second=59)))
+
+    # List events on the current day
+    events_result = service.events().list(
+        calendarId="primary",
+        timeMin=current_datetime.isoformat(),
+        timeMax=end_of_day.isoformat(),
+        singleEvents=True,
+    ).execute()
+    events = events_result.get('items', [])
+
+    # Loop from current time, in intervals of 15 mins, check scheduling conflict, if conflict continue, else return this time slot and don't allow event to be past 11:59pm
+    time_slot = current_datetime
+    # O(n^2) time complexity but n is small so it's fine
+    while time_slot < end_of_day:
+        # Check if there is a scheduling conflict
+        def is_scheduling_conflict(
+                start_time: datetime,
+                end_time: datetime,
+                events: Sequence[GoogleCalendarEvent],
+        ):
+            for event in events:
+                if event.get("start") and event.get("end") and event.get("start").get("dateTime") and event.get("end").get("dateTime"):
+                    event_start_time = datetime.fromisoformat(event.get("start").get("dateTime")) # type: ignore
+                    event_end_time = datetime.fromisoformat(event.get("end").get("dateTime")) # type: ignore
+                    if start_time < event_end_time or end_time > event_start_time:
+                        return True
+            return False
+        
+        if not is_scheduling_conflict(time_slot, time_slot + timedelta(minutes=event_duration_minutes), events):
+            return time_slot
+        else:
+            time_slot += timedelta(minutes=15)
+    return None
+
+
+async def refresh_daily_jobs_with_google_cal(
+    context: ContextTypes.DEFAULT_TYPE,
+    get_next_event_job: Callable[[datetime, str, Optional[datetime]], Callable[
+        ..., Coroutine[Any, Any, None]
+    ]],  # curried function that takes in event time and desc and returns job function
+) -> List[GoogleCalendarEvent]:
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for refresh_daily_jobs_with_google_cal")
+        await send_on_error_message(context)
+        return []
+    user_id = context.chat_data["user_id"]
+    chat_id = context.chat_data["chat_id"]
+    users = fetch_user(telegram_user_id=user_id)
     first_user = users[0]
     refresh_token = first_user.get("google_refresh_token", "")
+
     # Get events from tomorrow 12am to tomorrow 11:59pm
-    today = datetime.utcnow()
-    today_midnight = datetime(today.year, today.month, today.day, 0, 0)
+    today = datetime.now(
+        tz=pytz.timezone("America/New_York")
+        )
+    today_midnight = datetime(today.year, today.month, today.day, 23, 30)
     events = get_calendar_events(
         refresh_token=refresh_token,
         timeMin=today_midnight.isoformat() + "Z",
         timeMax=(today_midnight + timedelta(days=1)).isoformat() + "Z",
         k=20,
     )
-    for e in events:
+    logger.info("refreshed cal", events)
+    for event in events:
         # Create a datetime object for the current datetime
         current_datetime = datetime.now(tz=pytz.timezone("America/New_York"))
         # Create a datetime object for the given datetime
-        if e.get("start").get("date"):
+        if not event.get("start").get("dateTime", False):
+            # Skip all-day events
             continue
-        given_datetime = datetime.fromisoformat(e.get("start").get("dateTime", ""))
+        given_datetime = datetime.fromisoformat(
+            event.get("start").get("dateTime", "")
+        )
         if not given_datetime:
             continue
         # Calculate the time difference in seconds
         time_diff = (current_datetime - given_datetime).total_seconds()
-        chat_id = -1
-        if update is not None and update.message is not None:
-            chat_id = update.message.chat_id
 
-        if update is not None and update.effective_message is not None:
-            chat_id = update.effective_message.chat_id
+        has_end_datetime = event.get("endTimeUnspecified", False)
+        end_datetime = datetime.fromisoformat(
+            event.get("end").get("dateTime", "")
+        ) if has_end_datetime else None
 
-        if (
-            update is not None
-            and update.callback_query is not None
-            and update.callback_query.message is not None
-        ):
-            chat_id = update.callback_query.message.chat_id
+        job_func = get_next_event_job(given_datetime, event.get("summary"), end_datetime)
 
-        if context.job is not None and context.job.chat_id is not None:
-            chat_id = context.job.chat_id
-        
-        await add_once_job(job=e, due=time_diff, chat_id=chat_id, context=context)
-    return [e for e in events]
+        await add_once_job(
+            job=job_func, due=time_diff, chat_id=chat_id, context=context
+        )
+    return events

@@ -7,16 +7,15 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
 )
-
 import os
 from dotenv import load_dotenv
-
+from constants import Command
 from error_handlers import error_handler
 from admin_commands import start_command, help_command, cancel_command
 from unknown_response import unknown_command, unknown_text
 from handler import handle_callback_query, handle_text
 from task import add_task
-from view import view_list, view_schedule
+from view import view_all_tasks, view_schedule
 
 load_dotenv()
 
@@ -27,13 +26,12 @@ if __name__ == "__main__":
     app = Application.builder().token(TOKEN).build()
 
     # Commands
-    app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("task", add_task))
-    app.add_handler(CommandHandler("list", view_list))
-    app.add_handler(CommandHandler("schedule", view_schedule))
-    app.add_handler(CommandHandler("cancel", cancel_command))
-
+    app.add_handler(CommandHandler(Command.START, start_command))
+    app.add_handler(CommandHandler(Command.HELP, help_command))
+    app.add_handler(CommandHandler(Command.ADD, add_task))
+    app.add_handler(CommandHandler(Command.TASKS, view_all_tasks))
+    app.add_handler(CommandHandler(Command.SCHEDULE, view_schedule))
+    app.add_handler(CommandHandler(Command.CANCEL, cancel_command))
     app.add_handler(CallbackQueryHandler(handle_callback_query))
 
     conv_handler = ConversationHandler(

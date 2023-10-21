@@ -8,12 +8,11 @@ from logger_config import configure_logger
 
 logger = configure_logger()
 
-from utils import send_message
+from utils import send_message, send_on_error_message, update_chat_data_state
 
+
+@update_chat_data_state
 async def night_flow_review(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if context.chat_data is not None:
-        context.chat_data["state"] = "night_flow_review"
-
     keyboard = [
         [
             InlineKeyboardButton("Yes", callback_data="night_flow_review_yes"),
@@ -32,45 +31,49 @@ async def night_flow_review(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     )
 
 
+@update_chat_data_state
 async def night_flow_feeling(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    if context.chat_data is not None:
-        context.chat_data["state"] = "night_flow_feeling"
-
     await send_message(
         update, context, "Today you completed tasks <a>, <b>, <c>. How are you feeling?"
     )
 
 
+@update_chat_data_state
 async def night_flow_favourite(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    if context.chat_data is not None:
-        context.chat_data["state"] = "night_flow_favourite"
-
     await send_message(update, context, "What was your favourite part of the day?")
 
 
+@update_chat_data_state
 async def night_flow_proud(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if context.chat_data is not None:
-        context.chat_data["state"] = "night_flow_proud"
-
     await send_message(update, context, "What are you proud of yourself for today?")
 
 
+@update_chat_data_state
 async def night_flow_improve(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    if context.chat_data is not None:
-        context.chat_data["state"] = "night_flow_improve"
-
     await send_message(update, context, "What was one thing you can improve on?")
 
 
+@update_chat_data_state
 async def night_flow_next_day_schedule(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
+    if update.message is None:
+        logger.error("update.message is None for night_flow_next_day_schedule")
+        await send_on_error_message(context)
+        return
+    if update.message.from_user is None:
+        logger.error(
+            "update.message.from_user is None for night_flow_next_day_schedule"
+        )
+        await send_on_error_message(context)
+        return
+
     users = fetch_user(telegram_user_id=update.message.from_user.id)
     first_user = users[0]
     refresh_token = first_user.get("google_refresh_token", "")
@@ -84,10 +87,12 @@ async def night_flow_next_day_schedule(
         k=20,
     )
 
-    event_str = "".join([f"{e.get('summary', '')} at {e.get('start', {}).get('dateTime', '')}\n" for e in events])
-
-    if context.chat_data is not None:
-        context.chat_data["state"] = "night_flow_next_day_schedule"
+    event_str = "".join(
+        [
+            f"{e.get('summary', '')} at {e.get('start', {}).get('dateTime', '')}\n"
+            for e in events
+        ]
+    )
 
     keyboard = [
         [
@@ -108,12 +113,10 @@ async def night_flow_next_day_schedule(
     await send_message(update, context, event_str, reply_markup=reply_markup)
 
 
+@update_chat_data_state
 async def night_flow_pick_time(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    if context.chat_data is not None:
-        context.chat_data["state"] = "night_flow_pick_time"
-
     await send_message(
         update,
         context,
@@ -121,12 +124,10 @@ async def night_flow_pick_time(
     )
 
 
+@update_chat_data_state
 async def night_flow_invalid_time(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    if context.chat_data is not None:
-        context.chat_data["state"] = "night_flow_invalid_time"
-
     await send_message(
         update,
         context,
@@ -134,10 +135,8 @@ async def night_flow_invalid_time(
     )
 
 
+@update_chat_data_state
 async def night_flow_new_review_time(context: ContextTypes.DEFAULT_TYPE) -> None:
-    if context.chat_data is not None:
-        context.chat_data["state"] = "night_flow_new_review_time"
-
     keyboard = [
         [
             InlineKeyboardButton("Yes", callback_data="night_flow_new_review_time_yes"),
@@ -155,10 +154,8 @@ async def night_flow_new_review_time(context: ContextTypes.DEFAULT_TYPE) -> None
     )
 
 
+@update_chat_data_state
 async def night_flow_skip(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if context.chat_data is not None:
-        context.chat_data["state"] = "night_flow_skip"
-
     await send_message(
         update, context, "Alright, let's get straight to planning for tomorrow then!"
     )
@@ -166,21 +163,17 @@ async def night_flow_skip(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await night_flow_next_day_schedule(update, context)
 
 
+@update_chat_data_state
 async def night_flow_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.chat_data is not None:
-        context.chat_data["state"] = "night_flow_end"
-
     await send_message(update, context, "Good night!")
 
     return ConversationHandler.END
 
 
+@update_chat_data_state
 async def night_flow_next_day_schedule_edit(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
-    if context.chat_data is not None:
-        context.chat_data["state"] = "night_flow_next_day_schedule_edit"
-
     keyboard = [
         [
             InlineKeyboardButton(
