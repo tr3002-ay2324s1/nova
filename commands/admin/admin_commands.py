@@ -20,7 +20,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     context.chat_data["state"] = "start_command"
-    context.chat_data["user_id"] = str(update.message.from_user.id)
+    # note that chat_id and user_id are the same for private chat
     context.chat_data["chat_id"] = str(update.message.chat_id)
 
     await send_message(

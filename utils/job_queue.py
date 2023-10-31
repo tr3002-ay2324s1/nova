@@ -25,34 +25,29 @@ def remove_job_if_exists(job_name: str, context: ContextTypes.DEFAULT_TYPE) -> b
 
 
 async def add_once_job(
-    job, due: float, chat_id: int, context: ContextTypes.DEFAULT_TYPE
+    callback, when: time, chat_id: int, context: ContextTypes.DEFAULT_TYPE
 ):
     """Add a once job to the queue."""
-    if due < 0:
-        # await context.bot.send_message(
-        #     chat_id=chat_id, text="Sorry we cannot go back to future!"
-        # )
-        return
-
-    job_name = f"{chat_id}_{job.__name__}_once"
+    job_name = f"{chat_id}_{callback.__name__}_once"
     remove_job_if_exists(job_name, context)
 
-    if context.job_queue is not None:
-        context.job_queue.run_once(job, due, chat_id=chat_id, name=job_name, data=due)
+    # Explicitly set the time zone to America/New_York
+    when = when.replace(tzinfo=pytz.timezone("America/New_York"))
 
-        logger.info(
-            f"Once job added for chat ID {chat_id}. Due: {due}, Data: {due}, Name: {job_name}"
-        )
+    if context.job_queue is not None:
+        context.job_queue.run_once(callback, when, chat_id=chat_id, name=job_name)
+
+        logger.info(f"Once job {job_name} added for {chat_id} at {when}")
 
 
 async def add_daily_job(
-    job,
+    callback,
     time: time,
     chat_id: int,
     context: ContextTypes.DEFAULT_TYPE,
 ):
     """Add a daily job to the queue."""
-    job_name = f"{chat_id}_{job.__name__}_daily"
+    job_name = f"{chat_id}_{callback.__name__}_daily"
     remove_job_if_exists(job_name, context)
 
     # Explicitly set the time zone to America/New_York
@@ -69,12 +64,8 @@ async def add_daily_job(
     )  # The job will run every day (0=Monday, 1=Tuesday, ..., 6=Sunday)
 
     if context.job_queue is not None:
-        data_string = str(time.isoformat()) + " " + str(days)
-
         context.job_queue.run_daily(
-            job, time, days, chat_id=chat_id, name=job_name, data=data_string
+            callback, time, days, chat_id=chat_id, name=job_name
         )
 
-        logger.info(
-            f"Daily job added for chat ID {chat_id}. Time: {time}, Days: {days}, Data: {data_string}, Name: {job_name}"
-        )
+        logger.info(f"Daily job {job_name} added for {chat_id} at {time} every {days}")

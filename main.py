@@ -10,6 +10,9 @@ from telegram.ext import (
 import os
 from dotenv import load_dotenv
 from commands.admin.admin_commands import cancel_command, help_command, start_command
+from commands.event.event_command import event_title
+from commands.task.task_command import task_title
+from handlers.error_handlers import error_handler
 from handlers.handler import handle_callback_query, handle_text
 from utils.unknown_response import unknown_command, unknown_text
 from enum import Enum
@@ -23,8 +26,8 @@ EXPECT_TEXT = range(1)
 class Command(str, Enum):
     START = "start"
     HELP = "help"
-    ADD = "add"
-    TASKS = "tasks"
+    EVENT = "event"
+    TASK = "task"
     SCHEDULE = "schedule"
     CANCEL = "cancel"
 
@@ -38,6 +41,10 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler(Command.HELP, help_command))
     app.add_handler(CommandHandler(Command.CANCEL, cancel_command))
 
+    app.add_handler(CommandHandler(Command.EVENT, event_title))
+    app.add_handler(CommandHandler(Command.TASK, task_title))
+
+    # Handlers
     app.add_handler(CallbackQueryHandler(handle_callback_query))
 
     conv_handler = ConversationHandler(
@@ -45,7 +52,6 @@ if __name__ == "__main__":
         states={EXPECT_TEXT: [MessageHandler(filters.TEXT, handle_text)]},
         fallbacks=[CommandHandler("cancel", cancel_command)],
     )
-
     app.add_handler(conv_handler)
 
     # Unknown
