@@ -3,7 +3,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 import pytz
 
-from logger_config import configure_logger
+from utils.logger_config import configure_logger
 
 logger = configure_logger()
 

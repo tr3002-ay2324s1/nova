@@ -5,8 +5,7 @@ import os
 import html
 import json
 import traceback
-from logger_config import configure_logger
-from utils import send_message
+from utils.logger_config import configure_logger
 
 logger = configure_logger()
 

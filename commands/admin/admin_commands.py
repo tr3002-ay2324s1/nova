@@ -1,12 +1,7 @@
 from telegram import ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes, ConversationHandler
-from constants import MORNING_FLOW_TIME
-from logger_config import configure_logger
-from utils import send_message, send_on_error_message, update_chat_data_state
-from google_oauth_utils import login_start
-from job_queue import add_daily_job
-from morning_flow import morning_flow_greeting
-from datetime import time
+from utils.logger_config import configure_logger
+from utils.utils import send_message, send_on_error_message, update_chat_data_state
 
 logger = configure_logger()
 
@@ -27,27 +22,12 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.chat_data["state"] = "start_command"
     context.chat_data["user_id"] = str(update.message.from_user.id)
     context.chat_data["chat_id"] = str(update.message.chat_id)
-    logger.info("user_id: " + str(update.message.from_user.id))
-    logger.info("tele_handle: " + str(update.message.from_user.username))
-
-    await add_daily_job(
-        morning_flow_greeting,
-        time(MORNING_FLOW_TIME[0], MORNING_FLOW_TIME[1]),
-        update.message.chat_id,
-        context,
-    )
 
     await send_message(
         update,
         context,
-        """
-    hey there :)
-I am nova,
-your personal assistant 💪🏽
-    """,
+        "hey there :)\nI am nova,\nyour personal assistant 💪🏽",
     )
-
-    await login_start(update, context)
 
 
 @update_chat_data_state
@@ -55,15 +35,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_message(
         update,
         context,
-        """
-        Available Commands:
-/start - Activate Nova
-/events - Show my schedule for the day
-/add - Add a task to be done
-/tasks - Show all my added tasks
-/cancel - Cancel the current command
-/help - Show this message
-        """,
+        "Available Commands:\n/start - Activate Nova\n/events - Show my schedule for the day\n/add - Add a task to be done\n/tasks - Show all my added tasks\n/cancel - Cancel the current command\n/help - Show this message",
     )
 
 

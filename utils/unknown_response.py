@@ -1,11 +1,11 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from logger_config import configure_logger
+from utils.logger_config import configure_logger
 
 logger = configure_logger()
 
-from utils import send_message
+from utils.utils import send_message
 
 
 async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):

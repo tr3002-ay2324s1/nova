@@ -8,7 +8,7 @@ from telegram import (
 )
 from telegram.ext import ContextTypes
 
-from logger_config import configure_logger
+from utils.logger_config import configure_logger
 
 logger = configure_logger()
 
