@@ -4,6 +4,7 @@ from telegram.ext import ContextTypes
 import pytz
 
 from utils.logger_config import configure_logger
+from utils.utils import send_on_error_message
 
 logger = configure_logger()
 
@@ -69,3 +70,14 @@ async def add_daily_job(
         )
 
         logger.info(f"Daily job {job_name} added for {chat_id} at {time} every {days}")
+
+
+async def clear_cron_jobs(context: ContextTypes.DEFAULT_TYPE):
+    if context.job_queue is None:
+        logger.error("context.job_queue is None for clear_cron_jobs")
+        await send_on_error_message(context)
+        return
+
+    for job in context.job_queue.jobs():
+        job.schedule_removal()
+        logger.info(f"Job {job} removed")
