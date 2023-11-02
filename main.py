@@ -9,10 +9,10 @@ from telegram.ext import (
 )
 import os
 from dotenv import load_dotenv
-from commands.admin.admin_commands import cancel_command, help_command, start_command
-from commands.event.event_command import event_title
-from commands.habit.habit_command import habit_title
-from commands.task.task_command import task_title
+from commands.admin_commands import cancel_command, help_command, start_command
+from commands.event_command import event_title
+from commands.habit_command import habit_title
+from commands.task_command import task_title
 from handlers.error_handlers import error_handler
 from handlers.handler import handle_callback_query, handle_text
 from utils.unknown_response import unknown_command, unknown_text

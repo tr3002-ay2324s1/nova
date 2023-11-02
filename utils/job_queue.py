@@ -2,6 +2,8 @@ from datetime import time
 from telegram import Update
 from telegram.ext import ContextTypes
 import pytz
+from flows.morning_flow import morning_flow
+from utils.constants import DAY_START_TIME
 
 from utils.logger_config import configure_logger
 from utils.utils import send_on_error_message
@@ -73,6 +75,10 @@ async def add_daily_job(
 
 
 async def clear_cron_jobs(context: ContextTypes.DEFAULT_TYPE):
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for clear_cron_jobs")
+        await send_on_error_message(context)
+        return
     if context.job_queue is None:
         logger.error("context.job_queue is None for clear_cron_jobs")
         await send_on_error_message(context)
@@ -81,3 +87,11 @@ async def clear_cron_jobs(context: ContextTypes.DEFAULT_TYPE):
     for job in context.job_queue.jobs():
         job.schedule_removal()
         logger.info(f"Job {job} removed")
+
+    # add back morning flow
+    await add_daily_job(
+        callback=morning_flow,
+        time=DAY_START_TIME,
+        chat_id=context.chat_data["chat_id"],
+        context=context,
+    )

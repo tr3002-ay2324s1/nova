@@ -1,5 +1,9 @@
+from datetime import time
 from telegram import ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes, ConversationHandler
+from flows.morning_flow import morning_flow
+from utils.constants import DAY_START_TIME
+from utils.job_queue import add_daily_job
 from utils.logger_config import configure_logger
 from utils.utils import send_message, send_on_error_message, update_chat_data_state
 
@@ -21,7 +25,15 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.chat_data["state"] = "start_command"
     # note that chat_id and user_id are the same for private chat
-    context.chat_data["chat_id"] = str(update.message.chat_id)
+    context.chat_data["chat_id"] = int(update.message.chat_id)
+
+    # add morning flow job
+    await add_daily_job(
+        callback=morning_flow,
+        time=DAY_START_TIME,
+        chat_id=context.chat_data["chat_id"],
+        context=context,
+    )
 
     await send_message(
         update,

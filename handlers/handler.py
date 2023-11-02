@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from commands.event.event_command import (
+from commands.event_command import (
     event_command_cancel,
     event_command_end,
     event_creation,
@@ -8,7 +8,7 @@ from commands.event.event_command import (
     event_end_time,
     event_start_time,
 )
-from commands.habit.habit_command import (
+from commands.habit_command import (
     habit_command_end,
     habit_creation,
     habit_duration,
@@ -16,13 +16,18 @@ from commands.habit.habit_command import (
     habit_schedule_edit,
     habit_schedule_updated,
 )
-from commands.task.task_command import (
+from commands.task_command import (
     task_command_end,
     task_creation,
     task_deadline,
     task_duration,
     task_schedule_edit,
     task_schedule_updated,
+)
+from flows.morning_flow import (
+    morning_flow_end,
+    morning_flow_schedule_edit,
+    morning_flow_schedule_updated,
 )
 
 from utils.logger_config import configure_logger
@@ -77,6 +82,14 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await habit_schedule_edit(update, context)
     elif query.data == "habit_schedule_edit_yes":
         await habit_schedule_updated(update, context)
+
+    # morning flow
+    elif query.data == "morning_flow_confirm":
+        await morning_flow_end(update, context)
+    elif query.data == "morning_flow_edit":
+        await morning_flow_schedule_edit(update, context)
+    elif query.data == "morning_flow_schedule_edit_yes":
+        await morning_flow_schedule_updated(update, context)
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
