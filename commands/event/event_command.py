@@ -12,6 +12,13 @@ logger = configure_logger()
 
 @update_chat_data_state
 async def event_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for event_title")
+        await send_on_error_message(context)
+        return
+
+    context.chat_data["new_event"] = dict()
+
     await send_message(
         update,
         context,
@@ -78,9 +85,11 @@ async def event_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context,
         'Got it! I have created an event for "'
         + title
-        + '" on "'
-        + date
-        + '" from '
+        + '" on '
+        + date[:2]
+        + "/"
+        + date[-2:]
+        + " from "
         + start_time
         + " to "
         + end_time,
@@ -126,7 +135,7 @@ async def event_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @update_chat_data_state
 async def event_command_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.chat_data is not None:
-        context.chat_data["new_event"] = {}
+        context.chat_data["new_event"] = dict()
 
     await send_message(
         update,

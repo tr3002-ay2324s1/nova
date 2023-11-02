@@ -1,5 +1,5 @@
 from telegram import Update
-from telegram.ext import ContextTypes, ConversationHandler
+from telegram.ext import ContextTypes
 from commands.event.event_command import (
     event_command_cancel,
     event_command_end,
@@ -8,10 +8,18 @@ from commands.event.event_command import (
     event_end_time,
     event_start_time,
 )
+from commands.habit.habit_command import (
+    habit_command_end,
+    habit_creation,
+    habit_duration,
+    habit_repetition,
+    habit_schedule_edit,
+    habit_schedule_updated,
+)
 from commands.task.task_command import (
     task_command_end,
     task_creation,
-    task_dateline,
+    task_deadline,
     task_duration,
     task_schedule_edit,
     task_schedule_updated,
@@ -62,6 +70,14 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     elif query.data == "task_schedule_edit_yes":
         await task_schedule_updated(update, context)
 
+    # habit_command
+    elif query.data == "habit_creation_confirm":
+        await habit_command_end(update, context)
+    elif query.data == "habit_creation_edit":
+        await habit_schedule_edit(update, context)
+    elif query.data == "habit_schedule_edit_yes":
+        await habit_schedule_updated(update, context)
+
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.chat_data is None:
@@ -94,7 +110,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # event_command
     elif state == "event_title":
-        context.chat_data["new_event"] = {"title": text}
+        context.chat_data["new_event"]["title"] = text
         await event_date(update, context)
     elif state == "event_date":
         context.chat_data["new_event"]["date"] = text
@@ -108,11 +124,22 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # task_command
     elif state == "task_title":
-        context.chat_data["new_task"] = {"title": text}
-        await task_dateline(update, context)
-    elif state == "task_date":
+        context.chat_data["new_task"]["title"] = text
+        await task_deadline(update, context)
+    elif state == "task_deadline":
         context.chat_data["new_task"]["dateline"] = text
         await task_duration(update, context)
     elif state == "task_duration":
         context.chat_data["new_task"]["duration"] = text
         await task_creation(update, context)
+
+    # habit_command
+    elif state == "habit_title":
+        context.chat_data["new_habit"]["title"] = text
+        await habit_repetition(update, context)
+    elif state == "habit_repetition":
+        context.chat_data["new_habit"]["repetition"] = text
+        await habit_duration(update, context)
+    elif state == "habit_duration":
+        context.chat_data["new_habit"]["duration"] = text
+        await habit_creation(update, context)

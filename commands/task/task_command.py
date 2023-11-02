@@ -4,7 +4,7 @@ from telegram import (
     Update,
 )
 from telegram.ext import ContextTypes, ConversationHandler
-from utils.datetime_utils import is_within_a_week, validate_date_string
+from utils.datetime_utils import is_within_a_week
 from utils.logger_config import configure_logger
 from utils.utils import send_message, send_on_error_message, update_chat_data_state
 
@@ -13,6 +13,13 @@ logger = configure_logger()
 
 @update_chat_data_state
 async def task_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for task_title")
+        await send_on_error_message(context)
+        return
+
+    context.chat_data["new_task"] = dict()
+
     await send_message(
         update,
         context,
@@ -21,7 +28,7 @@ async def task_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @update_chat_data_state
-async def task_dateline(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def task_deadline(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_message(
         update,
         context,
@@ -84,7 +91,7 @@ async def task_schedule_yes_update(update, context):
     # TODO: fit it in the empty slot with the most buffer time
 
     # TODO: generate updated schedule string
-    schedule = ""
+    schedule = "<schedule>"
 
     keyboard = [
         [
@@ -122,7 +129,7 @@ async def task_schedule_no_update(update: Update, context: ContextTypes.DEFAULT_
     await send_message(
         update,
         context,
-        'No changes to today’s schedule!\n\nI have jotted your task "'
+        'No changes to today’s schedule!\n\nI have added your task "'
         + title
         + '" into your list!',
     )
@@ -176,6 +183,9 @@ async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # TODO: add new task to database
 
     # TODO: create new event on gcal
+
+    if context.chat_data is not None:
+        context.chat_data["new_task"] = dict()
 
     await send_message(
         update,

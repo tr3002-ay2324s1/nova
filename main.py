@@ -11,6 +11,7 @@ import os
 from dotenv import load_dotenv
 from commands.admin.admin_commands import cancel_command, help_command, start_command
 from commands.event.event_command import event_title
+from commands.habit.habit_command import habit_title
 from commands.task.task_command import task_title
 from handlers.error_handlers import error_handler
 from handlers.handler import handle_callback_query, handle_text
@@ -26,10 +27,10 @@ EXPECT_TEXT = range(1)
 class Command(str, Enum):
     START = "start"
     HELP = "help"
+    CANCEL = "cancel"
     EVENT = "event"
     TASK = "task"
-    SCHEDULE = "schedule"
-    CANCEL = "cancel"
+    HABIT = "habit"
 
 
 if __name__ == "__main__":
@@ -43,6 +44,7 @@ if __name__ == "__main__":
 
     app.add_handler(CommandHandler(Command.EVENT, event_title))
     app.add_handler(CommandHandler(Command.TASK, task_title))
+    app.add_handler(CommandHandler(Command.HABIT, habit_title))
 
     # Handlers
     app.add_handler(CallbackQueryHandler(handle_callback_query))
