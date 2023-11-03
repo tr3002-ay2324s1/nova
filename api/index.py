@@ -33,7 +33,6 @@ async def root():
 
 @app.get("/ping")
 async def ping():
-    logger.info("ping pong")
     return {"message": "pong"}
 
 
@@ -41,14 +40,19 @@ async def ping():
 async def get_google_oauth_url(request: Request):
     """
     Route to get Google Oauth URL
+
+    params:
+        telegram_user_id: int
     """
     params = request.query_params
-    tele_user_id = params.get("telegram_user_id")
-    if not tele_user_id or not tele_user_id.isdigit():
-        raise Exception("Invalid telegram_user_id")
-    tele_user_id = int(tele_user_id)
+    telegram_user_id = params.get("telegram_user_id")
+    username = params.get("username")
+    if (not telegram_user_id or not telegram_user_id.isdigit()) or (not username):
+        raise Exception("Invalid telegram_user_id and/or username")
+    telegram_user_id = int(telegram_user_id)
     state_dict = {
-        "telegram_user_id": tele_user_id,
+        "telegram_user_id": telegram_user_id,
+        "username": username,
     }
     state_dict_dumps = json.dumps(state_dict)
     
@@ -66,8 +70,8 @@ async def google_oauth_callback(request: Request, response: Response):
         if not state_dict_dumps:
             raise Exception("state not in session")
         state_dict = json.loads(state_dict_dumps)
-        telegram_user_id = state_dict["telegram_user_id"]
-        username = state_dict["username"]
+        telegram_user_id = state_dict.get("telegram_user_id", "")
+        username = state_dict.get("username", "")
     else:
         raise Exception("state not in session")
     flow = google_auth_oauthlib.flow.Flow.from_client_config(

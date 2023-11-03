@@ -96,7 +96,7 @@ def get_google_oauth_client_config() -> Dict[str, GoogleOauthClientConfig]:
     "web": client_config 
   }
 
-def get_google_cal_link(telegram_user_id: int):
+def get_google_cal_link(telegram_user_id: Optional[int]):
   # Get user data from DB and re-direct to their calendar ID
   user_data = None
 
