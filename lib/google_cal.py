@@ -132,79 +132,74 @@ async def get_google_login_url(state_dict_str: Optional[str]):
     return authorization_url, state
 
 
-# def get_readable_cal_event_string(events: Sequence[GoogleCalendarEvent]):
-#     return "".join(
-#         [
-#             (
-#                 str(
-#                     event.get("summary")
-#                     + " @ "
-#                     + datetime.strptime(
-#                         event.get("start").get(
-#                             "dateTime",
-#                             "",  # Guaranteed not to happen because of if else
-#                         ),
-#                         "%Y-%m-%dT%H:%M:%S%z",
-#                     ).strftime("%H:%M")
-#                 )
-#                 + "\n"
-#             )
-#             if "start" in event and "dateTime" in event.get("start")
-#             else ""
-#             for event in events
-#         ]
-#     )
+def get_readable_cal_event_string(events: Sequence[GoogleCalendarEvent]):
+    event_summary_strings = []
+    for event in events:
+        if "start" in event and "dateTime" in event.get("start"):
+            # Guaranteed to be present because of if else
+            event_datetime_str: str = event["start"]["dateTime"] # type: ignore
+            event_summary_strings.append(
+                str(
+                    event.get("summary")
+                    + " @ "
+                    + datetime.strptime(
+                        event_datetime_str,
+                        "%Y-%m-%dT%H:%M:%S%z",
+                    ).strftime("%H:%M")
+                )
+            )
+    return "\n".join(event_summary_strings)
 
 
-# def get_calendar_events(
-#     *,
-#     refresh_token,
-#     timeMin=datetime.utcnow().isoformat() + "Z",  # 'Z' indicates UTC time
-#     timeMax=None,
-#     k=10,
-# ) -> List[
-#     GoogleCalendarEvent
-# ]:  # -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:
-#     """Shows basic usage of the Google Calendar API."""
-#     CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
-#     CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
-#     creds = Credentials.from_authorized_user_info(
-#         info={
-#             "refresh_token": refresh_token,
-#             "client_id": CLIENT_ID,
-#             "client_secret": CLIENT_SECRET,
-#         },
-#         scopes=GOOGLE_SCOPES,
-#     )
+def get_calendar_events(
+    *,
+    refresh_token,
+    timeMin=datetime.utcnow().isoformat() + "Z",  # 'Z' indicates UTC time
+    timeMax=None,
+    k=10,
+) -> List[
+    GoogleCalendarEvent
+]:  # -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:
+    """Shows basic usage of the Google Calendar API."""
+    CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
+    CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
+    creds = Credentials.from_authorized_user_info(
+        info={
+            "refresh_token": refresh_token,
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+        },
+        scopes=GOOGLE_SCOPES,
+    )
 
-#     if not creds or not creds.valid:
-#         if creds and creds.expired and creds.refresh_token:
-#             creds.refresh(Request())
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
 
-#     service = build("calendar", "v3", credentials=creds)
+    service = build("calendar", "v3", credentials=creds)
 
-#     # Call the Calendar API
-#     print(f"Getting the upcoming {k} events")
-#     events_result: GoogleCalendarGetEventsResponse = (
-#         service.events()
-#         .list(
-#             calendarId="primary",
-#             timeMin=timeMin,
-#             timeMax=timeMax,
-#             maxResults=k,
-#             singleEvents=True,
-#             orderBy="startTime",
-#             timeZone="America/New_York",
-#         )
-#         .execute()
-#     )
-#     events: Union[List[GoogleCalendarEvent], None] = events_result.get("items", [])
+    # Call the Calendar API
+    print(f"Getting the upcoming {k} events")
+    events_result: GoogleCalendarGetEventsResponse = (
+        service.events()
+        .list(
+            calendarId="primary",
+            timeMin=timeMin,
+            timeMax=timeMax,
+            maxResults=k,
+            singleEvents=True,
+            orderBy="startTime",
+            timeZone="America/New_York",
+        )
+        .execute()
+    )
+    events: Union[List[GoogleCalendarEvent], None] = events_result.get("items", [])
 
-#     if events is None or type(events) is not list:
-#         print("No upcoming events found.")
-#         return []
-#     else:
-#         return events
+    if events is None or type(events) is not list:
+        print("No upcoming events found.")
+        return []
+    else:
+        return events
 
 
 # def add_calendar_event(
