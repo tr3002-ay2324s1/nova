@@ -87,10 +87,13 @@ async def send_on_error_message(context: ContextTypes.DEFAULT_TYPE) -> None:
         text="Something went wrong. Please try again later or contact @juliussneezer04 for help!",
     )
 
+
 # ======= DATE UTILS =======
 def get_datetimes_till_end_of_day() -> Tuple[datetime, datetime]:
     # Preserve timezone info in lambdas for precision
-    gen_now = lambda : datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
-    gen_end_of_day = lambda : datetime.now(tz=NEW_YORK_TIMEZONE_INFO).replace(hour=23, minute=59, second=59)
+    gen_now = lambda: datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
+    gen_end_of_day = lambda: datetime.now(tz=NEW_YORK_TIMEZONE_INFO).replace(
+        hour=23, minute=59, second=59
+    )
 
     return gen_now(), gen_end_of_day()

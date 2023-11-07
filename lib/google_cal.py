@@ -433,30 +433,35 @@ def add_calendar_event(
 
     event = service.events().insert(calendarId="primary", body=event).execute()
 
+
 def update_calendar_event(
-  *,
-  event_id: str,
-  refresh_token: str,
-  updated_event: GoogleCalendarCreateEvent,
+    *,
+    event_id: str,
+    refresh_token: str,
+    updated_event: GoogleCalendarCreateEvent,
 ):
-  CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
-  CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
-  creds = Credentials.from_authorized_user_info(
-      info={
-          "refresh_token": refresh_token,
-          "client_id": CLIENT_ID,
-          "client_secret": CLIENT_SECRET,
-      },
-      scopes=GOOGLE_SCOPES,
-  )
+    CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
+    CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
+    creds = Credentials.from_authorized_user_info(
+        info={
+            "refresh_token": refresh_token,
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+        },
+        scopes=GOOGLE_SCOPES,
+    )
 
-  if not creds or not creds.valid:
-      if creds and creds.expired and creds.refresh_token:
-          creds.refresh(Request())
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
 
-  service = build("calendar", "v3", credentials=creds)
+    service = build("calendar", "v3", credentials=creds)
 
-  updated_event = service.events().update(calendarId="primary", eventId=event_id, body=updated_event).execute()
+    updated_event = (
+        service.events()
+        .update(calendarId="primary", eventId=event_id, body=updated_event)
+        .execute()
+    )
 
 
 # async def find_next_available_time_slot(
