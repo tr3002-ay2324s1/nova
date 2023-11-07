@@ -1,4 +1,5 @@
-from datetime import time
+from datetime import datetime, time
+from typing import Optional
 from telegram import Update
 from telegram.ext import ContextTypes
 import pytz
@@ -28,17 +29,26 @@ def remove_job_if_exists(job_name: str, context: ContextTypes.DEFAULT_TYPE) -> b
 
 
 async def add_once_job(
-    callback, when: time, chat_id: int, context: ContextTypes.DEFAULT_TYPE
+    callback,
+    when: datetime,
+    chat_id: int,
+    context: ContextTypes.DEFAULT_TYPE,
+    data: Optional[str] = None,
 ):
     """Add a once job to the queue."""
-    job_name = f"{chat_id}_{callback.__name__}_once"
+    when_formatted = when.strftime("%Y%m%d_%H%M")
+    job_name_suffix = f"_{data}" if data else ""
+    job_name = f"once_{callback.__name__}_{when_formatted}_{chat_id}{job_name_suffix}"
+
     remove_job_if_exists(job_name, context)
 
     # Explicitly set the time zone to America/New_York
     when = when.replace(tzinfo=pytz.timezone("America/New_York"))
 
     if context.job_queue is not None:
-        context.job_queue.run_once(callback, when, chat_id=chat_id, name=job_name)
+        context.job_queue.run_once(
+            callback, when, chat_id=chat_id, name=job_name, data=data
+        )
 
         logger.info(f"Once job {job_name} added for {chat_id} at {when}")
 
@@ -48,9 +58,13 @@ async def add_daily_job(
     time: time,
     chat_id: int,
     context: ContextTypes.DEFAULT_TYPE,
+    data: Optional[str] = None,
 ):
     """Add a daily job to the queue."""
-    job_name = f"{chat_id}_{callback.__name__}_daily"
+    time_formatted = time.strftime("%H%M")
+    job_name_suffix = f"_{data}" if data else ""
+    job_name = f"daily_{callback.__name__}_{time_formatted}_{chat_id}{job_name_suffix}"
+
     remove_job_if_exists(job_name, context)
 
     # Explicitly set the time zone to America/New_York
@@ -68,7 +82,7 @@ async def add_daily_job(
 
     if context.job_queue is not None:
         context.job_queue.run_daily(
-            callback, time, days, chat_id=chat_id, name=job_name
+            callback, time, days, chat_id=chat_id, name=job_name, data=data
         )
 
         logger.info(f"Daily job {job_name} added for {chat_id} at {time} every {days}")
