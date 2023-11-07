@@ -110,22 +110,6 @@ class GoogleCalendarAttendee(GoogleCalendarPerson):
     resource: bool
 
 
-class GoogleCalendarReceivedEvent(TypedDict):
-    start: GoogleCalendarEventTiming
-    originalStartTime: GoogleCalendarEventTiming
-    end: GoogleCalendarEventTiming
-    endTimeUnspecified: bool
-    summary: str
-    description: str
-    status: GoogleCalendarEventStatus
-    id: str
-    creator: GoogleCalendarPerson
-    organizer: GoogleCalendarPerson
-    visibility: GoogleCalendarEventVisibility
-    created: datetime
-    updated: datetime
-    htmlLink: str
-    attendees: List[GoogleCalendarAttendee]
 
 
 class GoogleCalendarCreateEventConferenceDataCreateRequest(TypedDict):
@@ -161,9 +145,26 @@ class GoogleCalendarCreateEventConferenceData(TypedDict):
 
 
 class GoogleCalendarCreateEventExtendedProperties(TypedDict):
-    private: Dict[Literal["nova_type"], NovaEvent]
+    private: Dict[Literal["nova_type"], NovaEvent] # This is how we store the type of event
     shared: Dict[str, str]
 
+class GoogleCalendarReceivedEvent(TypedDict):
+    start: GoogleCalendarEventTiming
+    originalStartTime: GoogleCalendarEventTiming
+    end: GoogleCalendarEventTiming
+    endTimeUnspecified: bool
+    summary: str
+    description: str
+    status: GoogleCalendarEventStatus
+    id: str
+    creator: GoogleCalendarPerson
+    organizer: GoogleCalendarPerson
+    visibility: GoogleCalendarEventVisibility
+    created: datetime
+    updated: datetime
+    htmlLink: str
+    attendees: List[GoogleCalendarAttendee]
+    extendedProperties: Optional[GoogleCalendarCreateEventExtendedProperties]
 
 class GoogleCalendarCreateEvent(TypedDict):
     kind: Literal["calendar#event"]
@@ -336,11 +337,11 @@ def get_calendar_events(
         )
         .execute()
     )
-    events: Union[List[GoogleCalendarReceivedEvent], None] = events_result.get(
+    events: List[GoogleCalendarReceivedEvent] = events_result.get(
         "items", []
     )
 
-    if events is None or type(events) is not list:
+    if type(events) is not list or len(events) == 0:
         print("No upcoming events found.")
         return []
     else:
