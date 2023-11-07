@@ -6,6 +6,8 @@ from telegram import (
 )
 from telegram.ext import ContextTypes, ConversationHandler
 from lib.google_cal import (
+    NovaEvent,
+    add_calendar_event,
     get_calendar_events,
     get_google_cal_link,
     get_readable_cal_event_str,
@@ -205,7 +207,14 @@ async def task_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TY
 async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # TODO: add new task to database
 
-    # TODO: create new event on gcal
+    # TODO: Get event/task/habit data
+    add_calendar_event(
+        refresh_token=(context.user_data or {}).get("google_refresh_token", None),
+        summary="test", # TODO: REPLACE
+        start_time=datetime.now(tz=NEW_YORK_TIMEZONE_INFO), # TODO: REPLACE
+        end_time=datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(minutes=30), # TODO: REPLACE
+        event_type=NovaEvent.TASK, # TODO: REPLACE
+    )
 
     if context.chat_data is not None:
         context.chat_data["new_task"] = dict()
