@@ -165,8 +165,6 @@ async def task_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 @update_chat_data_state
 async def task_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: sync gcal with database
-
     # TODO: update cron jobs
 
     await send_message(
