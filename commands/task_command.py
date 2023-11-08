@@ -1,15 +1,30 @@
+import pytz
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Update,
 )
 from telegram.ext import ContextTypes, ConversationHandler
+from lib.google_cal import (
+    NovaEvent,
+    add_calendar_event,
+    get_calendar_events,
+    get_google_cal_link,
+    get_readable_cal_event_str,
+)
+from utils.constants import NEW_YORK_TIMEZONE_INFO
 from utils.datetime_utils import is_within_a_week
 from utils.logger_config import configure_logger
-from utils.utils import send_message, send_on_error_message, update_chat_data_state
 from dotenv import load_dotenv
 import requests
 import os
+from utils.utils import (
+    get_datetimes_till_end_of_day,
+    send_message,
+    send_on_error_message,
+    update_chat_data_state,
+)
+from datetime import datetime, timedelta, tzinfo
 
 load_dotenv()
 logger = configure_logger()
@@ -94,8 +109,16 @@ async def task_schedule_yes_update(update, context):
 
     # TODO: fit it in the empty slot with the most buffer time
 
-    # TODO: generate updated schedule string
-    schedule = "<schedule>"
+    user = context.user_data or {}  # TODO Get User from DB
+    time_min, time_max = get_datetimes_till_end_of_day()
+    cal_schedule_events_str = get_readable_cal_event_str(
+        get_calendar_events(
+            refresh_token=user.get("google_refresh_token", None),
+            timeMin=time_min.isoformat(),
+            timeMax=time_max.isoformat(),
+            k=15,
+        )
+    )
 
     keyboard = [
         [
@@ -110,7 +133,7 @@ async def task_schedule_yes_update(update, context):
     await send_message(
         update,
         context,
-        "Here's your updated schedule: \n\n" + schedule,
+        "Here's your updated schedule: \n\n" + cal_schedule_events_str,
         reply_markup=reply_markup,
     )
 
@@ -157,11 +180,13 @@ async def task_creation_edit(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 @update_chat_data_state
 async def task_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: direct to google calendar
+    url = get_google_cal_link((context.user_data or {}).get("telegram_user_id", None))
 
     keyboard = [
         [
-            InlineKeyboardButton("Yes", callback_data="task_schedule_edit_yes"),
+            InlineKeyboardButton(
+                "Yes", callback_data="task_schedule_edit_yes", url=url
+            ),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -176,8 +201,6 @@ async def task_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 @update_chat_data_state
 async def task_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: sync gcal with database
-
     # TODO: update cron jobs
 
     await send_message(
@@ -200,7 +223,14 @@ async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url_post = f"{os.getenv('REQUEST_URL')}/tasks"
     requests.post(url_post, json=data)
 
-    # TODO: create new event on gcal
+    # TODO: Get event/task/habit data
+    add_calendar_event(
+        refresh_token=(context.user_data or {}).get("google_refresh_token", None),
+        summary="test", # TODO: REPLACE
+        start_time=datetime.now(tz=NEW_YORK_TIMEZONE_INFO), # TODO: REPLACE
+        end_time=datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(minutes=30), # TODO: REPLACE
+        event_type=NovaEvent.TASK, # TODO: REPLACE
+    )
 
     if context.chat_data is not None:
         context.chat_data["new_task"] = dict()

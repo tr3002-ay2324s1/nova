@@ -4,9 +4,18 @@ from telegram import (
     Update,
 )
 from telegram.ext import ContextTypes, ConversationHandler
-from utils.datetime_utils import is_within_a_week
+from lib.google_cal import (
+    get_calendar_events,
+    get_google_cal_link,
+    get_readable_cal_event_str,
+)
 from utils.logger_config import configure_logger
-from utils.utils import send_message, send_on_error_message, update_chat_data_state
+from utils.utils import (
+    get_datetimes_till_end_of_day,
+    send_message,
+    send_on_error_message,
+    update_chat_data_state,
+)
 
 logger = configure_logger()
 
@@ -62,7 +71,16 @@ async def habit_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Let's get started immediately.",
     )
 
-    # TODO: get schedule from calendar
+    user = context.user_data or {}  # TODO Get User from DB
+    time_min, time_max = get_datetimes_till_end_of_day()
+    cal_schedule_events_str = get_readable_cal_event_str(
+        get_calendar_events(
+            refresh_token=user.get("google_refresh_token", None),
+            timeMin=time_min.isoformat(),
+            timeMax=time_max.isoformat(),
+            k=15,
+        )
+    )
 
     # TODO: pick <repetition-number> free-est days
 
@@ -95,11 +113,13 @@ async def habit_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @update_chat_data_state
 async def habit_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: direct to google calendar
+    url = get_google_cal_link((context.user_data or {}).get("telegram_user_id", None))
 
     keyboard = [
         [
-            InlineKeyboardButton("Yes", callback_data="habit_schedule_edit_yes"),
+            InlineKeyboardButton(
+                "Yes", callback_data="habit_schedule_edit_yes", url=url
+            ),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -114,8 +134,6 @@ async def habit_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 @update_chat_data_state
 async def habit_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: sync gcal with database
-
     # TODO: update cron jobs
 
     await send_message(
