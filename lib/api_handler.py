@@ -1,15 +1,30 @@
-import requests
-import os
-from dotenv import load_dotenv
+from typing import List, TypedDict
+from requests import request, post
+from os import getenv
 
-load_dotenv()
 
-def add_task(userId, title="", description=""):
-    data = {
-        "userId": userId,
-        "name": title,
-        "description": description,
-    }
+class Task(TypedDict):
+    userId: str
+    name: str
+    duration: int
+    deadline: str  # MMDD
 
-    url_put = f"{os.getenv('REQUEST_URL')}/tasks"
-    requests.put(url_put, json=data)
+
+def get_user(user_id: str):
+    # Make a HTTP request to BASE_URL/users/{user_id}
+
+    user_res = request(
+        method="GET",
+        url=f"{getenv('REQUEST_URL')}/users/" + user_id,
+        headers={
+            "Content-Type": "application/json",
+        },
+    )
+
+    user = user_res.json()
+    return user
+
+
+def add_tasks(tasks: List[Task]):
+    url_post = f"{getenv('REQUEST_URL')}/tasks"
+    post(url_post, json=tasks)

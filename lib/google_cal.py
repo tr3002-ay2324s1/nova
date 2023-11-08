@@ -1,13 +1,16 @@
 from enum import Enum
-from re import L
 from typing import Any, Dict, List, Literal, Optional, Sequence, TypedDict, Union
 from google_auth_oauthlib.flow import Flow
-from datetime import datetime
+from datetime import datetime, timedelta
 from os import getenv
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from utils.constants import BASE_URL, GOOGLE_CAL_BASE_URL, GOOGLE_SCOPES
+from utils.constants import (
+    BASE_URL,
+    GOOGLE_CAL_BASE_URL,
+    GOOGLE_SCOPES,
+)
 
 
 class NovaEvent(str, Enum):
@@ -110,8 +113,6 @@ class GoogleCalendarAttendee(GoogleCalendarPerson):
     resource: bool
 
 
-
-
 class GoogleCalendarCreateEventConferenceDataCreateRequest(TypedDict):
     requestId: str
     conferenceSolutionKey: Dict[Literal["type"], str]
@@ -145,8 +146,11 @@ class GoogleCalendarCreateEventConferenceData(TypedDict):
 
 
 class GoogleCalendarCreateEventExtendedProperties(TypedDict):
-    private: Dict[Literal["nova_type"], NovaEvent] # This is how we store the type of event
+    private: Dict[
+        Literal["nova_type"], NovaEvent
+    ]  # This is how we store the type of event
     shared: Dict[str, str]
+
 
 class GoogleCalendarReceivedEvent(TypedDict):
     start: GoogleCalendarEventTiming
@@ -165,6 +169,7 @@ class GoogleCalendarReceivedEvent(TypedDict):
     htmlLink: str
     attendees: List[GoogleCalendarAttendee]
     extendedProperties: Optional[GoogleCalendarCreateEventExtendedProperties]
+
 
 class GoogleCalendarCreateEvent(TypedDict):
     kind: Literal["calendar#event"]
@@ -337,9 +342,7 @@ def get_calendar_events(
         )
         .execute()
     )
-    events: List[GoogleCalendarReceivedEvent] = events_result.get(
-        "items", []
-    )
+    events: List[GoogleCalendarReceivedEvent] = events_result.get("items", [])
 
     if type(events) is not list or len(events) == 0:
         print("No upcoming events found.")
@@ -348,7 +351,7 @@ def get_calendar_events(
         return events
 
 
-def add_calendar_event(
+def add_calendar_item(
     *,
     refresh_token: str,
     summary: str,
@@ -432,7 +435,7 @@ def add_calendar_event(
         "workingLocationProperties": None,
     }
 
-    event = service.events().insert(calendarId="primary", body=event).execute()
+    event_res = service.events().insert(calendarId="primary", body=event).execute()
 
 
 def update_calendar_event(
@@ -465,64 +468,65 @@ def update_calendar_event(
     )
 
 
-# async def find_next_available_time_slot(
-#         refresh_token: str
-#         events: Sequence[GoogleCalendarEvent],
-#         event_duration_minutes: int
-# ):
-#     CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
-#     CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
-#     creds = Credentials.from_authorized_user_info(
-#         info={
-#             "refresh_token": refresh_token,
-#             "client_id": CLIENT_ID,
-#             "client_secret": CLIENT_SECRET,
-#         },
-#         scopes=GOOGLE_SCOPES,
-#     )
+async def find_next_available_time_slot(
+    refresh_token: str,
+    time_min: datetime,
+    time_max: datetime,
+    event_duration_minutes: int,
+):
+    events = get_calendar_events(
+        refresh_token=refresh_token,
+        timeMin=time_min.isoformat(),
+        timeMax=time_max.isoformat(),
+        k=150,
+    )
 
-#     if not creds or not creds.valid:
-#         if creds and creds.expired and creds.refresh_token:
-#             creds.refresh(Request())
-#     service = build('calendar', 'v3', credentials=creds)
+    CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
+    CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
+    creds = Credentials.from_authorized_user_info(
+        info={
+            "refresh_token": refresh_token,
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+        },
+        scopes=GOOGLE_SCOPES,
+    )
 
-#     # Get the current date and time
-#     current_datetime = datetime.now(tz=pytz.timezone("America/New_York"))
-#     current_date = current_datetime.date()
-#     end_of_day = datetime.combine(current_date, datetime.time(datetime(year=current_date.year, month=current_date.month, day=current_date.day,hour=23, minute=59, second=59)))
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+    service = build("calendar", "v3", credentials=creds)
 
-#     # List events on the current day
-#     events_result = service.events().list(
-#         calendarId="primary",
-#         timeMin=current_datetime.isoformat(),
-#         timeMax=end_of_day.isoformat(),
-#         singleEvents=True,
-#     ).execute()
-#     events = events_result.get('items', [])
+    # Loop from minimum time
+    curr = time_min
+    # O(n^2) time complexity but n is small so it's fine
+    while curr < time_max:
+        # Check if there is a scheduling conflict
+        def is_scheduling_conflict(
+            start_time: datetime,
+            end_time: datetime,
+            events: Sequence[GoogleCalendarReceivedEvent],
+        ):
+            for event in events:
+                if (
+                    event.get("start")
+                    and event.get("end")
+                    and event.get("start").get("dateTime")
+                    and event.get("end").get("dateTime")
+                ):
+                    event_start_time = datetime.fromisoformat(event.get("start").get("dateTime"))  # type: ignore
+                    event_end_time = datetime.fromisoformat(event.get("end").get("dateTime"))  # type: ignore
+                    if start_time < event_end_time or end_time > event_start_time:
+                        return True
+            return False
 
-#     # Loop from current time, in intervals of 15 mins, check scheduling conflict, if conflict continue, else return this time slot and don't allow event to be past 11:59pm
-#     time_slot = current_datetime
-#     # O(n^2) time complexity but n is small so it's fine
-#     while time_slot < end_of_day:
-#         # Check if there is a scheduling conflict
-#         def is_scheduling_conflict(
-#                 start_time: datetime,
-#                 end_time: datetime,
-#                 events: Sequence[GoogleCalendarEvent],
-#         ):
-#             for event in events:
-#                 if event.get("start") and event.get("end") and event.get("start").get("dateTime") and event.get("end").get("dateTime"):
-#                     event_start_time = datetime.fromisoformat(event.get("start").get("dateTime")) # type: ignore
-#                     event_end_time = datetime.fromisoformat(event.get("end").get("dateTime")) # type: ignore
-#                     if start_time < event_end_time or end_time > event_start_time:
-#                         return True
-#             return False
-
-#         if not is_scheduling_conflict(time_slot, time_slot + timedelta(minutes=event_duration_minutes), events):
-#             return time_slot
-#         else:
-#             time_slot += timedelta(minutes=15)
-#     return None
+        if not is_scheduling_conflict(
+            curr, curr + timedelta(minutes=event_duration_minutes), events
+        ):
+            return curr, curr + timedelta(minutes=event_duration_minutes)
+        else:
+            curr += timedelta(minutes=event_duration_minutes)
+    return None
 
 
 # async def refresh_daily_jobs_with_google_cal(

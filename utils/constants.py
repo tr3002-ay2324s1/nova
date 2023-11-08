@@ -12,5 +12,5 @@ GOOGLE_SCOPES = [
     "profile",
 ]
 _ENV = getenv("ENVIRONMENT")  # "dev" or "prod"
-BASE_URL = "http://127.0.0.1:8000" if _ENV == "dev" else "https://render.link"
+BASE_URL = "http://127.0.0.1:8000" if _ENV == "dev" else "https://avon-seven.vercel.app"
 TELEGRAM_BOT_LINK = "https://www.t.me/brio_tracker_bot"

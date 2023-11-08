@@ -9,9 +9,9 @@ from lib.google_cal import (
     get_google_cal_link,
     get_readable_cal_event_str,
 )
+from utils.datetime_utils import get_datetimes_till_end_of_day
 from utils.logger_config import configure_logger
 from utils.utils import (
-    get_datetimes_till_end_of_day,
     send_message,
     send_on_error_message,
     update_chat_data_state,

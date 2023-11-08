@@ -1,31 +1,31 @@
 import pytz
-from lib.api_handler import add_task
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Update,
 )
 from telegram.ext import ContextTypes, ConversationHandler
+from lib.api_handler import add_tasks, get_user
 from lib.google_cal import (
     NovaEvent,
-    add_calendar_event,
+    add_calendar_item,
+    find_next_available_time_slot,
     get_calendar_events,
     get_google_cal_link,
     get_readable_cal_event_str,
 )
 from utils.constants import NEW_YORK_TIMEZONE_INFO
-from utils.datetime_utils import is_within_a_week
+from utils.datetime_utils import get_datetimes_till_end_of_day, is_within_a_week
 from utils.logger_config import configure_logger
 from dotenv import load_dotenv
 import requests
 import os
 from utils.utils import (
-    get_datetimes_till_end_of_day,
     send_message,
     send_on_error_message,
     update_chat_data_state,
 )
-from datetime import datetime, timedelta, tzinfo
+from datetime import datetime, timedelta
 
 load_dotenv()
 logger = configure_logger()
@@ -74,6 +74,9 @@ async def task_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     title: str = context.chat_data["new_task"]["title"] or ""
     dateline: str = context.chat_data["new_task"]["dateline"] or ""
+    duration: str = context.chat_data["new_task"]["duration"] or "0"
+
+    duration_minutes = int(duration)
 
     if title == "":
         logger.error("title is empty for handle_text")
@@ -86,19 +89,48 @@ async def task_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Alright, give me a second. I am checking your schedule right now!",
     )
 
-    # TODO: get schedule from calendar
-
     # check if deadline is within a week
     if is_within_a_week(dateline):
-        # TODO: checks for empty slot
-        has_empty_slot = True
+        user_id = context.chat_data["chat_id"]
+        user = get_user(user_id)
+        time_min, time_max = get_datetimes_till_end_of_day()
+
+        has_empty_slot = bool(
+            await find_next_available_time_slot(
+                refresh_token=user.get("google_refresh_token", ""),
+                time_min=time_min,
+                time_max=time_max,
+                event_duration_minutes=duration_minutes,
+            )
+        )
 
         if has_empty_slot:
             await task_schedule_yes_update(update, context)
         else:
             await task_schedule_no_update(update, context)
+
+        add_tasks(
+            [
+                {
+                    "userId": context.chat_data["chat_id"],
+                    "name": context.chat_data["new_task"]["title"] or "New Task",
+                    "duration": int(context.chat_data["new_task"]["duration"] or "0"),
+                    "deadline": context.chat_data["new_task"]["dateline"] or "",
+                }
+            ]
+        )
     else:
         await task_schedule_no_update(update, context)
+        add_tasks(
+            [
+                {
+                    "userId": context.chat_data["chat_id"],
+                    "name": context.chat_data["new_task"]["title"] or "New Task",
+                    "duration": int(context.chat_data["new_task"]["duration"] or "0"),
+                    "deadline": context.chat_data["new_task"]["dateline"] or "",
+                }
+            ]
+        )
 
 
 async def task_schedule_yes_update(update, context):
@@ -108,10 +140,32 @@ async def task_schedule_yes_update(update, context):
         "Since the deadline is less than a week, I have found time for you to get it done today!",
     )
 
-    # TODO: fit it in the empty slot with the most buffer time
-
-    user = context.user_data or {}  # TODO Get User from DB
+    user = get_user(context.chat_data["chat_id"])
     time_min, time_max = get_datetimes_till_end_of_day()
+    duration: str = context.chat_data["new_task"]["duration"] or "0"
+    duration_minutes = int(duration)
+    time_slot = await find_next_available_time_slot(
+        refresh_token=user.get("google_refresh_token", ""),
+        time_min=time_min,
+        time_max=time_max,
+        event_duration_minutes=duration_minutes,
+    )
+
+    if not time_slot:
+        logger.error("time_slot is empty for task_schedule_yes_update")
+        await send_on_error_message(context)
+        return
+
+    start_time, end_time = time_slot
+
+    add_calendar_item(
+        refresh_token=user.get("google_refresh_token", ""),
+        summary=context.chat_data["new_task"]["title"] or "New Task",
+        start_time=start_time,
+        end_time=end_time,
+        event_type=NovaEvent.TASK,
+    )
+
     cal_schedule_events_str = get_readable_cal_event_str(
         get_calendar_events(
             refresh_token=user.get("google_refresh_token", None),
@@ -151,8 +205,6 @@ async def task_schedule_no_update(update: Update, context: ContextTypes.DEFAULT_
         logger.error("title is empty for handle_text")
         await send_on_error_message(context)
         return
-
-    add_task(userId=context.chat_data["user_id"], title=title, description="")
 
     await send_message(
         update,
@@ -208,10 +260,9 @@ async def task_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TY
 
 @update_chat_data_state
 async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    add_task(userId=context.chat_data["user_id"], title="", description="")
-
+    
     # TODO: Get event/task/habit data
-    add_calendar_event(
+    add_calendar_item(
         refresh_token=(context.user_data or {}).get("google_refresh_token", None),
         summary="test",  # TODO: REPLACE
         start_time=datetime.now(tz=NEW_YORK_TIMEZONE_INFO),  # TODO: REPLACE
