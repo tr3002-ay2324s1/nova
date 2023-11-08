@@ -124,7 +124,7 @@ async def event_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_on_error_message(context)
         return
 
-    add_task(userId=123, title=title, description="")
+    add_task(userId=context.chat_data["user_id"], title=title, description="")
 
     await send_message(
         update,

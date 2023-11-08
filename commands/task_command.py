@@ -152,7 +152,7 @@ async def task_schedule_no_update(update: Update, context: ContextTypes.DEFAULT_
         await send_on_error_message(context)
         return
 
-    add_task(userId=123, title=title, description="")
+    add_task(userId=context.chat_data["user_id"], title=title, description="")
 
     await send_message(
         update,
@@ -208,7 +208,7 @@ async def task_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TY
 
 @update_chat_data_state
 async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    add_task(userId=123, title="", description="")
+    add_task(userId=context.chat_data["user_id"], title="", description="")
 
     # TODO: Get event/task/habit data
     add_calendar_event(
