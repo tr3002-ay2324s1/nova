@@ -4,7 +4,7 @@ from telegram import (
     Update,
 )
 from telegram.ext import ContextTypes, ConversationHandler
-from utils.datetime_utils import is_within_a_week
+from lib.google_cal import get_google_cal_link
 from utils.logger_config import configure_logger
 from utils.utils import send_message, send_on_error_message, update_chat_data_state
 
@@ -95,11 +95,11 @@ async def habit_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @update_chat_data_state
 async def habit_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: direct to google calendar
+    url = get_google_cal_link((context.user_data or {}).get("telegram_user_id", None))
 
     keyboard = [
         [
-            InlineKeyboardButton("Yes", callback_data="habit_schedule_edit_yes"),
+            InlineKeyboardButton("Yes", callback_data="habit_schedule_edit_yes", url=url),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
