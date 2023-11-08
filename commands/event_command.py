@@ -6,7 +6,11 @@ from telegram import (
 from telegram.ext import ContextTypes, ConversationHandler
 from utils.logger_config import configure_logger
 from utils.utils import send_message, send_on_error_message, update_chat_data_state
+from dotenv import load_dotenv
+import requests
+import os
 
+load_dotenv()
 logger = configure_logger()
 
 
@@ -121,7 +125,14 @@ async def event_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_on_error_message(context)
         return
 
-    # TODO: add new event to database
+    data = {
+        "userId": 123,
+        "name": title,
+        "description": "",
+    }
+
+    url_post = f"{os.getenv('REQUEST_URL')}/tasks"
+    requests.post(url_post, json=data)
 
     await send_message(
         update,

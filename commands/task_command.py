@@ -15,6 +15,9 @@ from lib.google_cal import (
 from utils.constants import NEW_YORK_TIMEZONE_INFO
 from utils.datetime_utils import is_within_a_week
 from utils.logger_config import configure_logger
+from dotenv import load_dotenv
+import requests
+import os
 from utils.utils import (
     get_datetimes_till_end_of_day,
     send_message,
@@ -23,6 +26,7 @@ from utils.utils import (
 )
 from datetime import datetime, timedelta, tzinfo
 
+load_dotenv()
 logger = configure_logger()
 
 
@@ -147,7 +151,14 @@ async def task_schedule_no_update(update: Update, context: ContextTypes.DEFAULT_
         await send_on_error_message(context)
         return
 
-    # TODO: add new task to database
+    data = {
+        "userId": 123,
+        "name": title,
+        "description": "",
+    }
+
+    url_post = f"{os.getenv('REQUEST_URL')}/tasks"
+    requests.post(url_post, json=data)
 
     await send_message(
         update,
@@ -203,7 +214,14 @@ async def task_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TY
 
 @update_chat_data_state
 async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: add new task to database
+    data = {
+        "userId": 123,
+        "name": "",
+        "description": "",
+    }
+
+    url_post = f"{os.getenv('REQUEST_URL')}/tasks"
+    requests.post(url_post, json=data)
 
     # TODO: Get event/task/habit data
     add_calendar_event(
