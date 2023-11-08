@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global logger
@@ -20,7 +21,7 @@ async def lifespan(app: FastAPI):
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
     logger.addHandler(handler)
-    
+
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("GOOGLE_CLIENT_SECRET"))
@@ -55,7 +56,7 @@ async def get_google_oauth_url(request: Request):
         "username": username,
     }
     state_dict_dumps = json.dumps(state_dict)
-    
+
     return get_google_login_url(state_dict_str=state_dict_dumps)
 
 

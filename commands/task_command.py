@@ -5,11 +5,22 @@ from telegram import (
     Update,
 )
 from telegram.ext import ContextTypes, ConversationHandler
-from lib.google_cal import get_calendar_events, get_google_cal_link, get_readable_cal_event_string
+from lib.google_cal import (
+    NovaEvent,
+    add_calendar_event,
+    get_calendar_events,
+    get_google_cal_link,
+    get_readable_cal_event_str,
+)
 from utils.constants import NEW_YORK_TIMEZONE_INFO
 from utils.datetime_utils import is_within_a_week
 from utils.logger_config import configure_logger
-from utils.utils import get_datetimes_till_end_of_day, send_message, send_on_error_message, update_chat_data_state
+from utils.utils import (
+    get_datetimes_till_end_of_day,
+    send_message,
+    send_on_error_message,
+    update_chat_data_state,
+)
 from datetime import datetime, timedelta, tzinfo
 
 logger = configure_logger()
@@ -94,15 +105,16 @@ async def task_schedule_yes_update(update, context):
 
     # TODO: fit it in the empty slot with the most buffer time
 
-    user = context.user_data or {} # TODO Get User from DB
+    user = context.user_data or {}  # TODO Get User from DB
     time_min, time_max = get_datetimes_till_end_of_day()
-    cal_schedule_events_str = get_readable_cal_event_string(
+    cal_schedule_events_str = get_readable_cal_event_str(
         get_calendar_events(
-        refresh_token=user.get("google_refresh_token", None),
-        timeMin=time_min.isoformat(),
-        timeMax=time_max.isoformat(),
-        k=15,
-    ))
+            refresh_token=user.get("google_refresh_token", None),
+            timeMin=time_min.isoformat(),
+            timeMax=time_max.isoformat(),
+            k=15,
+        )
+    )
 
     keyboard = [
         [
@@ -161,7 +173,9 @@ async def task_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     keyboard = [
         [
-            InlineKeyboardButton("Yes", callback_data="task_schedule_edit_yes", url=url),
+            InlineKeyboardButton(
+                "Yes", callback_data="task_schedule_edit_yes", url=url
+            ),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -191,7 +205,14 @@ async def task_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TY
 async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # TODO: add new task to database
 
-    # TODO: create new event on gcal
+    # TODO: Get event/task/habit data
+    add_calendar_event(
+        refresh_token=(context.user_data or {}).get("google_refresh_token", None),
+        summary="test", # TODO: REPLACE
+        start_time=datetime.now(tz=NEW_YORK_TIMEZONE_INFO), # TODO: REPLACE
+        end_time=datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(minutes=30), # TODO: REPLACE
+        event_type=NovaEvent.TASK, # TODO: REPLACE
+    )
 
     if context.chat_data is not None:
         context.chat_data["new_task"] = dict()

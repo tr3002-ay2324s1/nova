@@ -1,31 +1,65 @@
 from enum import Enum
-from re import T
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Sequence, TypedDict, Union
+from re import L
+from typing import Any, Dict, List, Literal, Optional, Sequence, TypedDict, Union
 from google_auth_oauthlib.flow import Flow
-from datetime import timedelta, datetime
+from datetime import datetime
 from os import getenv
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-import json
-import pytz
-from telegram.ext import ContextTypes
 from utils.constants import BASE_URL, GOOGLE_CAL_BASE_URL, GOOGLE_SCOPES
 
+
+class NovaEvent(str, Enum):
+    EVENT = "event"
+    HABIT = "habit"
+    TASK = "task"
+
+
 class GoogleOauthClientConfig(TypedDict):
-  client_id: str
-  project_id: str
-  auth_uri: str
-  token_uri: str
-  auth_provider_x509_cert_url: str
-  client_secret: str
-  redirect_uris: List[str]
-  javascript_origins: List[str]
+    client_id: str
+    project_id: str
+    auth_uri: str
+    token_uri: str
+    auth_provider_x509_cert_url: str
+    client_secret: str
+    redirect_uris: List[str]
+    javascript_origins: List[str]
+
 
 class GoogleCalendarEventStatus(Enum):
     CONFIRMED = "confirmed"
     TENTATIVE = "tentative"
     CANCELLED = "cancelled"
+
+
+class GoogleCalendarCreateEventReminderOverride(TypedDict):
+    method: str
+    minutes: int
+
+
+class GoogleCalendarCreateEventAttachment(TypedDict):
+    fileUrl: str
+    title: str
+    mimeType: str
+    iconLink: str
+    fileId: str
+
+
+class GoogleCalendarCreateEventReminder(TypedDict):
+    useDefault: bool
+    overrides: List[GoogleCalendarCreateEventReminderOverride]
+
+
+class GoogleCalendarCreateEventGadget(TypedDict):
+    type: str
+    title: str
+    link: str
+    iconLink: str
+    width: int
+    height: int
+    display: str
+    preferences: Dict[str, str]
 
 
 class GoogleCalendarEventVisibility(Enum):
@@ -39,6 +73,27 @@ class GoogleCalendarEventTiming(TypedDict):
     dateTime: Optional[str]  # ISO 8601
     date: Optional[str]  # ISO 8601
     timeZone: str
+
+
+class GoogleCalendarEventWorkingLocationType(Enum):
+    HOME_OFFICE = "homeOffice"
+    CUSTOM_LOCATION = "customLocation"
+    OFFICE_LOCATION = "officeLocation"
+
+
+class GoogleCalendarEventWorkingLocationOfficeLocation(TypedDict):
+    buildingId: str
+    floorId: str
+    floorSectionId: str
+    deskId: str
+    label: str
+
+
+class GoogleCalendarEventWorkingLocation(TypedDict):
+    type: GoogleCalendarEventWorkingLocationType
+    homeOffice: Any  # If present, user is working from home
+    customLocation: Dict[Literal["label"], str]
+    officeLocation: GoogleCalendarEventWorkingLocationOfficeLocation
 
 
 class GoogleCalendarPerson(TypedDict):
@@ -55,7 +110,45 @@ class GoogleCalendarAttendee(GoogleCalendarPerson):
     resource: bool
 
 
-class GoogleCalendarEvent(TypedDict):
+
+
+class GoogleCalendarCreateEventConferenceDataCreateRequest(TypedDict):
+    requestId: str
+    conferenceSolutionKey: Dict[Literal["type"], str]
+    status: Dict[Literal["statusCode"], str]
+
+
+class GoogleCalendarCreateEventConferenceDataEntryPoint(TypedDict):
+    entryPointType: str
+    uri: str
+    label: str
+    pin: str
+    accessCode: str
+    meetingCode: str
+    passcode: str
+    password: str
+
+
+class GoogleCalendarCreateEventConferenceDataConferenceSolution(TypedDict):
+    key: Dict[Literal["type"], str]
+    name: str
+    iconUri: str
+
+
+class GoogleCalendarCreateEventConferenceData(TypedDict):
+    createRequest: GoogleCalendarCreateEventConferenceDataCreateRequest
+    entryPoints: List[GoogleCalendarCreateEventConferenceDataEntryPoint]
+    conferenceSolution: GoogleCalendarCreateEventConferenceDataConferenceSolution
+    conferenceId: str
+    signature: str
+    notes: str
+
+
+class GoogleCalendarCreateEventExtendedProperties(TypedDict):
+    private: Dict[Literal["nova_type"], NovaEvent] # This is how we store the type of event
+    shared: Dict[str, str]
+
+class GoogleCalendarReceivedEvent(TypedDict):
     start: GoogleCalendarEventTiming
     originalStartTime: GoogleCalendarEventTiming
     end: GoogleCalendarEventTiming
@@ -71,40 +164,91 @@ class GoogleCalendarEvent(TypedDict):
     updated: datetime
     htmlLink: str
     attendees: List[GoogleCalendarAttendee]
+    extendedProperties: Optional[GoogleCalendarCreateEventExtendedProperties]
+
+class GoogleCalendarCreateEvent(TypedDict):
+    kind: Literal["calendar#event"]
+    etag: Optional[str]
+    id: Optional[str]
+    status: Optional[GoogleCalendarEventStatus]
+    htmlLink: Optional[str]
+    created: Optional[datetime]
+    updated: Optional[datetime]
+    summary: str
+    description: Optional[str]
+    location: Optional[str]
+    colorId: Optional[str]
+    creator: Optional[GoogleCalendarPerson]
+    organizer: Optional[GoogleCalendarPerson]
+    start: GoogleCalendarEventTiming
+    end: GoogleCalendarEventTiming
+    endTimeUnspecified: Optional[bool]
+    recurrence: Optional[List[str]]
+    recurringEventId: Optional[str]
+    originalStartTime: Optional[GoogleCalendarEventTiming]
+    transparency: Optional[str]
+    visibility: Optional[GoogleCalendarEventVisibility]
+    iCalUID: Optional[str]
+    sequence: Optional[int]
+    attendees: Optional[List[GoogleCalendarAttendee]]
+    attendeesOmitted: Optional[bool]
+    extendedProperties: Optional[GoogleCalendarCreateEventExtendedProperties]
+    hangoutLink: Optional[str]
+    conferenceData: Optional[GoogleCalendarCreateEventConferenceData]
+    gadget: Optional[GoogleCalendarCreateEventGadget]
+    anyoneCanAddSelf: Optional[bool]
+    guestsCanInviteOthers: Optional[bool]
+    guestsCanModify: Optional[bool]
+    guestsCanSeeOtherGuests: Optional[bool]
+    privateCopy: Optional[bool]
+    locked: Optional[bool]
+    reminders: Optional[List[GoogleCalendarCreateEventReminder]]
+    source: Optional[Dict[Union[Literal["url"], Literal["title"]], str]]
+    workingLocationProperties: Optional[GoogleCalendarEventWorkingLocation]
+    attachments: Optional[List[GoogleCalendarCreateEventAttachment]]
+    eventType: Optional[
+        Union[
+            Literal["default"],
+            Literal["outOfOffice"],
+            Literal["workingLocation"],
+            Literal["focusTime"],
+        ]
+    ]
 
 
 class GoogleCalendarGetEventsResponse(TypedDict):
-    items: List[GoogleCalendarEvent]
+    items: List[GoogleCalendarReceivedEvent]
+
 
 def get_google_oauth_client_config() -> Dict[str, GoogleOauthClientConfig]:
-  client_id = getenv("GOOGLE_CLIENT_ID")
-  client_secret = getenv("GOOGLE_CLIENT_SECRET")
-  if not client_id or not client_secret:
-    raise Exception("GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is not set")
-  client_config: GoogleOauthClientConfig = {
-    "client_id": client_id,
-    "project_id":"nova-401105",
-    "auth_uri":"https://accounts.google.com/o/oauth2/auth",
-    "token_uri":"https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs",
-    "client_secret": client_secret,
-    "redirect_uris":["http://127.0.0.1:8000/google_oauth_callback"],
-    "javascript_origins":["http://localhost:8081"]
-  }
-  
-  return {
-    "web": client_config 
-  }
+    client_id = getenv("GOOGLE_CLIENT_ID")
+    client_secret = getenv("GOOGLE_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        raise Exception("GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is not set")
+    client_config: GoogleOauthClientConfig = {
+        "client_id": client_id,
+        "project_id": "nova-401105",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_secret": client_secret,
+        "redirect_uris": ["http://127.0.0.1:8000/google_oauth_callback"],
+        "javascript_origins": ["http://localhost:8081"],
+    }
+
+    return {"web": client_config}
+
 
 def get_google_cal_link(telegram_user_id: Optional[int]):
-  # Get user data from DB and re-direct to their calendar ID
-  user_data = None
+    # Get user data from DB and re-direct to their calendar ID
+    user_data = None
 
-  if user_data:
-    return f"{GOOGLE_CAL_BASE_URL}?cid={telegram_user_id}"
-  else:
-     return GOOGLE_CAL_BASE_URL
-  
+    if user_data:
+        return f"{GOOGLE_CAL_BASE_URL}?cid={telegram_user_id}"
+    else:
+        return GOOGLE_CAL_BASE_URL
+
+
 async def get_google_login_url(state_dict_str: Optional[str]):
     flow = Flow.from_client_config(
         client_config=get_google_oauth_client_config(),
@@ -132,13 +276,13 @@ async def get_google_login_url(state_dict_str: Optional[str]):
     return authorization_url, state
 
 
-def get_readable_cal_event_string(events: Sequence[GoogleCalendarEvent]):
-    event_summary_strings = []
+def get_readable_cal_event_str(events: Sequence[GoogleCalendarReceivedEvent]):
+    event_summary_strs = []
     for event in events:
         if "start" in event and "dateTime" in event.get("start"):
             # Guaranteed to be present because of if else
-            event_datetime_str: str = event["start"]["dateTime"] # type: ignore
-            event_summary_strings.append(
+            event_datetime_str: str = event["start"]["dateTime"]  # type: ignore
+            event_summary_strs.append(
                 str(
                     event.get("summary")
                     + " @ "
@@ -148,7 +292,7 @@ def get_readable_cal_event_string(events: Sequence[GoogleCalendarEvent]):
                     ).strftime("%H:%M")
                 )
             )
-    return "\n".join(event_summary_strings)
+    return "\n".join(event_summary_strs)
 
 
 def get_calendar_events(
@@ -158,7 +302,7 @@ def get_calendar_events(
     timeMax=None,
     k=10,
 ) -> List[
-    GoogleCalendarEvent
+    GoogleCalendarReceivedEvent
 ]:  # -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:# -> list[Any] | Any | List[GoogleCalendarEvent]:
     """Shows basic usage of the Google Calendar API."""
     CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
@@ -193,63 +337,138 @@ def get_calendar_events(
         )
         .execute()
     )
-    events: Union[List[GoogleCalendarEvent], None] = events_result.get("items", [])
+    events: List[GoogleCalendarReceivedEvent] = events_result.get(
+        "items", []
+    )
 
-    if events is None or type(events) is not list:
+    if type(events) is not list or len(events) == 0:
         print("No upcoming events found.")
         return []
     else:
         return events
 
 
-# def add_calendar_event(
-#     *,
-#     refresh_token,
-#     summary,
-#     start_time: datetime,
-#     end_time: datetime,
-# ):
-#     CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
-#     CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
-#     creds = Credentials.from_authorized_user_info(
-#         info={
-#             "refresh_token": refresh_token,
-#             "client_id": CLIENT_ID,
-#             "client_secret": CLIENT_SECRET,
-#         },
-#         scopes=GOOGLE_SCOPES,
-#     )
+def add_calendar_event(
+    *,
+    refresh_token: str,
+    summary: str,
+    start_time: datetime,
+    end_time: datetime,
+    event_type: NovaEvent,
+):
+    CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
+    CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
+    creds = Credentials.from_authorized_user_info(
+        info={
+            "refresh_token": refresh_token,
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+        },
+        scopes=GOOGLE_SCOPES,
+    )
 
-#     if not creds or not creds.valid:
-#         if creds and creds.expired and creds.refresh_token:
-#             creds.refresh(Request())
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
 
-#     service = build("calendar", "v3", credentials=creds)
+    service = build("calendar", "v3", credentials=creds)
 
-#     start_obj = {
-#         # "date": start_time.date().isoformat(),
-#         "timeZone": "America/New_York",
-#         "dateTime": start_time.isoformat(),
-#     }
-#     print("START", start_obj)
-#     end_obj = {
-#         # "date": end_time.date().isoformat(),
-#         "timeZone": "America/New_York",
-#         "dateTime": end_time.isoformat(),
-#     }
+    start_obj: GoogleCalendarEventTiming = {
+        "timeZone": "America/New_York",
+        "dateTime": start_time.isoformat(),
+        "date": None,
+    }
+    end_obj: GoogleCalendarEventTiming = {
+        "timeZone": "America/New_York",
+        "dateTime": end_time.isoformat(),
+        "date": None,
+    }
 
-#     event = {
-#         "summary": summary,
-#         "start": start_obj,
-#         "end": end_obj,
-#     }
+    event: GoogleCalendarCreateEvent = {
+        "summary": summary,
+        "start": start_obj,
+        "end": end_obj,
+        "attendees": [],
+        "eventType": "default",
+        "anyoneCanAddSelf": False,
+        "guestsCanInviteOthers": False,
+        "guestsCanModify": False,
+        "attachments": [],
+        "attendeesOmitted": False,
+        "colorId": None,
+        "conferenceData": None,
+        "created": None,
+        "creator": None,
+        "endTimeUnspecified": False,
+        "etag": None,
+        "extendedProperties": {
+            "private": {
+                "nova_type": event_type,
+            },
+            "shared": {},
+        },
+        "gadget": None,
+        "guestsCanSeeOtherGuests": False,
+        "description": None,
+        "hangoutLink": None,
+        "htmlLink": None,
+        "iCalUID": None,
+        "id": None,
+        "kind": "calendar#event",
+        "locked": False,
+        "location": None,
+        "organizer": None,
+        "originalStartTime": None,
+        "privateCopy": False,
+        "recurrence": [],
+        "recurringEventId": None,
+        "reminders": None,
+        "sequence": None,
+        "source": None,
+        "status": GoogleCalendarEventStatus.CONFIRMED,
+        "transparency": None,
+        "updated": None,
+        "visibility": GoogleCalendarEventVisibility.PRIVATE,
+        "workingLocationProperties": None,
+    }
 
-#     event = service.events().insert(calendarId="primary", body=event).execute()
+    event = service.events().insert(calendarId="primary", body=event).execute()
+
+
+def update_calendar_event(
+    *,
+    event_id: str,
+    refresh_token: str,
+    updated_event: GoogleCalendarCreateEvent,
+):
+    CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
+    CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
+    creds = Credentials.from_authorized_user_info(
+        info={
+            "refresh_token": refresh_token,
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+        },
+        scopes=GOOGLE_SCOPES,
+    )
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+
+    service = build("calendar", "v3", credentials=creds)
+
+    updated_event = (
+        service.events()
+        .update(calendarId="primary", eventId=event_id, body=updated_event)
+        .execute()
+    )
+
 
 # async def find_next_available_time_slot(
-#         refresh_token: str,
+#         refresh_token: str
 #         events: Sequence[GoogleCalendarEvent],
-#         event_duration_minutes: int,
+#         event_duration_minutes: int
 # ):
 #     CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
 #     CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
@@ -298,7 +517,7 @@ def get_calendar_events(
 #                     if start_time < event_end_time or end_time > event_start_time:
 #                         return True
 #             return False
-        
+
 #         if not is_scheduling_conflict(time_slot, time_slot + timedelta(minutes=event_duration_minutes), events):
 #             return time_slot
 #         else:
@@ -308,7 +527,7 @@ def get_calendar_events(
 
 # async def refresh_daily_jobs_with_google_cal(
 #     context: ContextTypes.DEFAULT_TYPE,
-#     get_next_event_job: Callable[[datetime, str, Optional[datetime]], Callable[
+#     get_next_event_job: Callable[[datetime, str Optional[datetime]], Callable[
 #         ..., Coroutine[Any, Any, None]
 #     ]],  # curried function that takes in event time and desc and returns job function
 # ) -> List[GoogleCalendarEvent]:
