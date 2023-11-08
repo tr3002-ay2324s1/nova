@@ -30,7 +30,7 @@ class GoogleOauthClientConfig(TypedDict):
     javascript_origins: List[str]
 
 
-class GoogleCalendarEventStatus(Enum):
+class GoogleCalendarEventStatus(str, Enum):
     CONFIRMED = "confirmed"
     TENTATIVE = "tentative"
     CANCELLED = "cancelled"
@@ -65,7 +65,7 @@ class GoogleCalendarCreateEventGadget(TypedDict):
     preferences: Dict[str, str]
 
 
-class GoogleCalendarEventVisibility(Enum):
+class GoogleCalendarEventVisibility(str, Enum):
     DEFAULT = "default"
     PUBLIC = "public"
     PRIVATE = "private"
@@ -175,7 +175,7 @@ class GoogleCalendarCreateEvent(TypedDict):
     kind: Literal["calendar#event"]
     etag: Optional[str]
     id: Optional[str]
-    status: Optional[GoogleCalendarEventStatus]
+    status: Optional[str]
     htmlLink: Optional[str]
     created: Optional[datetime]
     updated: Optional[datetime]
@@ -192,7 +192,7 @@ class GoogleCalendarCreateEvent(TypedDict):
     recurringEventId: Optional[str]
     originalStartTime: Optional[GoogleCalendarEventTiming]
     transparency: Optional[str]
-    visibility: Optional[GoogleCalendarEventVisibility]
+    visibility: Optional[str]
     iCalUID: Optional[str]
     sequence: Optional[int]
     attendees: Optional[List[GoogleCalendarAttendee]]
@@ -428,10 +428,10 @@ def add_calendar_item(
         "reminders": None,
         "sequence": None,
         "source": None,
-        "status": GoogleCalendarEventStatus.CONFIRMED,
+        "status": str(GoogleCalendarEventStatus.CONFIRMED),
         "transparency": None,
         "updated": None,
-        "visibility": GoogleCalendarEventVisibility.PRIVATE,
+        "visibility": str(GoogleCalendarEventVisibility.PRIVATE),
         "workingLocationProperties": None,
     }
 

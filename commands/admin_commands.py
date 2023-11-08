@@ -26,20 +26,20 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.chat_data["state"] = "start_command"
     # note that chat_id and user_id are the same for private chat
-    context.chat_data["chat_id"] = int(update.message.chat_id)
+    context.chat_data["chat_id"] = str(update.message.chat_id)
 
     # add morning flow job
     await add_daily_job(
         callback=morning_flow,
         time=DAY_START_TIME,
-        chat_id=context.chat_data["chat_id"],
+        chat_id=int(context.chat_data["chat_id"]),
         context=context,
     )
 
     await add_once_job(
         callback=block_start_alert,
         when=(datetime.now() + timedelta(minutes=4)),
-        chat_id=context.chat_data["chat_id"],
+        chat_id=int(context.chat_data["chat_id"]),
         context=context,
         data="<task_name>",
     )

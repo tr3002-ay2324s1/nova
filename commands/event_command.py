@@ -4,7 +4,7 @@ from telegram import (
     Update,
 )
 from telegram.ext import ContextTypes, ConversationHandler
-from lib.api_handler import add_tasks
+from lib.api_handler import add_tasks, get_user
 from lib.google_cal import NovaEvent, add_calendar_item
 from utils.logger_config import configure_logger
 from utils.utils import send_message, send_on_error_message, update_chat_data_state
@@ -137,10 +137,13 @@ async def event_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if title == "" or date_str == "" or start_time_str == "" or end_time_str == "":
         logger.error("title or date or start_time or end_time is empty for handle_text")
         await send_on_error_message(context)
-        return
-    
+        return    
+    user = get_user(context.chat_data["chat_id"])
+
+    logger.info("Refresh: " + str(user.get("google_refresh_token", "")))
+
     add_calendar_item(
-        refresh_token=context.chat_data["user"]["google_refresh_token"],
+        refresh_token=user.get("google_refresh_token", ""),
         summary=title,
         start_time=start_time,
         end_time=end_time,

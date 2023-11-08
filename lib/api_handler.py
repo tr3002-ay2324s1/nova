@@ -15,7 +15,7 @@ def get_user(user_id: str):
 
     user_res = request(
         method="GET",
-        url=f"{getenv('REQUEST_URL')}/users/" + user_id,
+        url=f"{getenv('REQUEST_URL')}/users/telegram/" + user_id,
         headers={
             "Content-Type": "application/json",
         },
