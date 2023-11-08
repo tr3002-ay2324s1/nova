@@ -2,7 +2,7 @@ from datetime import time
 from os import getenv
 import pytz
 
-NEW_YORK_TIMEZONE_INFO = pytz.timezone("America/New York")
+NEW_YORK_TIMEZONE_INFO = pytz.timezone("America/New_York")
 DAY_START_TIME = time(hour=8, minute=0, second=0)
 DAY_END_TIME = time(hour=19, minute=0, second=0)
 GOOGLE_CAL_BASE_URL = "https://calendar.google.com/calendar/u/0/r"
