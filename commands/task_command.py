@@ -1,4 +1,5 @@
 import pytz
+from lib.api_handler import add_task
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -151,14 +152,7 @@ async def task_schedule_no_update(update: Update, context: ContextTypes.DEFAULT_
         await send_on_error_message(context)
         return
 
-    data = {
-        "userId": 123,
-        "name": title,
-        "description": "",
-    }
-
-    url_post = f"{os.getenv('REQUEST_URL')}/tasks"
-    requests.post(url_post, json=data)
+    add_task(userId=123, title=title, description="")
 
     await send_message(
         update,
@@ -214,22 +208,16 @@ async def task_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TY
 
 @update_chat_data_state
 async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    data = {
-        "userId": 123,
-        "name": "",
-        "description": "",
-    }
-
-    url_post = f"{os.getenv('REQUEST_URL')}/tasks"
-    requests.post(url_post, json=data)
+    add_task(userId=123, title="", description="")
 
     # TODO: Get event/task/habit data
     add_calendar_event(
         refresh_token=(context.user_data or {}).get("google_refresh_token", None),
-        summary="test", # TODO: REPLACE
-        start_time=datetime.now(tz=NEW_YORK_TIMEZONE_INFO), # TODO: REPLACE
-        end_time=datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(minutes=30), # TODO: REPLACE
-        event_type=NovaEvent.TASK, # TODO: REPLACE
+        summary="test",  # TODO: REPLACE
+        start_time=datetime.now(tz=NEW_YORK_TIMEZONE_INFO),  # TODO: REPLACE
+        end_time=datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
+        + timedelta(minutes=30),  # TODO: REPLACE
+        event_type=NovaEvent.TASK,  # TODO: REPLACE
     )
 
     if context.chat_data is not None:
