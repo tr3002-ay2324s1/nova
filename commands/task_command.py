@@ -1,4 +1,3 @@
-import pytz
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -18,8 +17,6 @@ from utils.constants import NEW_YORK_TIMEZONE_INFO
 from utils.datetime_utils import get_datetimes_till_end_of_day, is_within_a_week
 from utils.logger_config import configure_logger
 from dotenv import load_dotenv
-import requests
-import os
 from utils.utils import (
     send_message,
     send_on_error_message,
@@ -104,32 +101,30 @@ async def task_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         )
 
+        logger.info("has_empty_slot: " + str(has_empty_slot))
+
         if has_empty_slot:
             await task_schedule_yes_update(update, context)
         else:
             await task_schedule_no_update(update, context)
 
         add_tasks(
-            [
-                {
-                    "userId": context.chat_data["chat_id"],
-                    "name": context.chat_data["new_task"]["title"] or "New Task",
-                    "duration": int(context.chat_data["new_task"]["duration"] or "0"),
-                    "deadline": context.chat_data["new_task"]["dateline"] or "",
-                }
-            ]
+            {
+                "userId": context.chat_data["chat_id"],
+                "name": context.chat_data["new_task"]["title"] or "New Task",
+                "duration": int(context.chat_data["new_task"]["duration"] or "0"),
+                "deadline": context.chat_data["new_task"]["dateline"] or "",
+            }
         )
     else:
         await task_schedule_no_update(update, context)
         add_tasks(
-            [
-                {
-                    "userId": context.chat_data["chat_id"],
-                    "name": context.chat_data["new_task"]["title"] or "New Task",
-                    "duration": int(context.chat_data["new_task"]["duration"] or "0"),
-                    "deadline": context.chat_data["new_task"]["dateline"] or "",
-                }
-            ]
+            {
+                "userId": context.chat_data["chat_id"],
+                "name": context.chat_data["new_task"]["title"] or "New Task",
+                "duration": int(context.chat_data["new_task"]["duration"] or "0"),
+                "deadline": context.chat_data["new_task"]["dateline"] or "",
+            }
         )
 
 

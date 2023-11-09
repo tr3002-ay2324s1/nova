@@ -11,6 +11,7 @@ class Task(TypedDict):
     duration: int
     deadline: str  # MMDD
 
+
 def get_google_oauth_login_url(telegram_user_id: str, username: str):
     # Make a HTTP GET request to BASE_URL/get_google_oauth_url
 
@@ -29,7 +30,7 @@ def get_google_oauth_login_url(telegram_user_id: str, username: str):
 
     url: str = res.json()["url"]
     return url
-    
+
 
 def get_user(tele_user_id: str):
     # Make a HTTP request to BASE_URL/users/telegram/{user_id}

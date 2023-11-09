@@ -8,7 +8,6 @@ from googleapiclient.discovery import build
 from utils.constants import (
     GOOGLE_CAL_BASE_URL,
     GOOGLE_SCOPES,
-    
 )
 
 
@@ -252,6 +251,7 @@ def get_google_cal_link(telegram_user_id: Optional[int]):
     else:
         return GOOGLE_CAL_BASE_URL
 
+
 def get_readable_cal_event_str(events: Sequence[GoogleCalendarReceivedEvent]):
     event_summary_strs = []
     for event in events:
@@ -411,24 +411,8 @@ async def find_next_available_time_slot(
         refresh_token=refresh_token,
         timeMin=time_min.isoformat(),
         timeMax=time_max.isoformat(),
-        k=150,
+        k=500,
     )
-
-    CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
-    CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
-    creds = Credentials.from_authorized_user_info(
-        info={
-            "refresh_token": refresh_token,
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
-        },
-        scopes=GOOGLE_SCOPES,
-    )
-
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-    service = build("calendar", "v3", credentials=creds)
 
     # Loop from minimum time
     curr = time_min
