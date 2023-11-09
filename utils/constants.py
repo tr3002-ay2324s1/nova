@@ -10,7 +10,7 @@ GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/userinfo.email",
     "openid",
     "https://www.googleapis.com/auth/userinfo.profile",
-    "https://www.googleapis.com/auth/calendar.events.readonly",
+    "https://www.googleapis.com/auth/calendar.events",
 ]
 _ENV = getenv("ENVIRONMENT")  # "dev" or "prod"
 BASE_URL = "http://127.0.0.1:8000" if _ENV == "dev" else "https://avon-seven.vercel.app"
