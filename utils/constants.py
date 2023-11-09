@@ -13,5 +13,5 @@ GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/calendar.events",
 ]
 _ENV = getenv("ENVIRONMENT")  # "dev" or "prod"
-BASE_URL = "http://127.0.0.1:8000" if _ENV == "dev" else "https://nova-api-ten.vercel.app/"
+BASE_URL = "http://127.0.0.1:8000" if _ENV == "dev" else "https://nova-api-ten.vercel.app"
 TELEGRAM_BOT_LINK = "https://www.t.me/brio_tracker_bot"
