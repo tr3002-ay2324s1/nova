@@ -1,15 +1,14 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Sequence, TypedDict, Union
-from google_auth_oauthlib.flow import Flow
 from datetime import datetime, timedelta
 from os import getenv
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from utils.constants import (
-    BASE_URL,
     GOOGLE_CAL_BASE_URL,
     GOOGLE_SCOPES,
+    
 )
 
 
@@ -252,34 +251,6 @@ def get_google_cal_link(telegram_user_id: Optional[int]):
         return f"{GOOGLE_CAL_BASE_URL}?cid={telegram_user_id}"
     else:
         return GOOGLE_CAL_BASE_URL
-
-
-async def get_google_login_url(state_dict_str: Optional[str]):
-    flow = Flow.from_client_config(
-        client_config=get_google_oauth_client_config(),
-        scopes=GOOGLE_SCOPES,
-    )
-
-    # Indicate where the API server will redirect the user after the user completes
-    # the authorization flow. The redirect URI is required. The value must exactly
-    # match one of the authorized redirect URIs for the OAuth 2.0 client, which you
-    # configured in the API Console. If this value doesn't match an authorized URI,
-    # you will get a 'redirect_uri_mismatch' error.
-    flow.redirect_uri = BASE_URL + "/google_oauth_callback"
-
-    # Generate URL for request to Google's OAuth 2.0 server.
-    # Use kwargs to set optional request parameters.
-    authorization_url, state = flow.authorization_url(
-        # Enable offline access so that you can refresh an access token without
-        # re-prompting the user for permission. Recommended for web server apps.
-        access_type="offline",
-        # Enable incremental authorization. Recommended as a best practice.
-        include_granted_scopes="true",
-        state=state_dict_str or "",
-    )
-
-    return authorization_url, state
-
 
 def get_readable_cal_event_str(events: Sequence[GoogleCalendarReceivedEvent]):
     event_summary_strs = []

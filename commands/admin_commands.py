@@ -1,10 +1,15 @@
-from datetime import datetime, time, timedelta
-from telegram import ReplyKeyboardRemove, Update
+import json
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    ReplyKeyboardRemove,
+    Update,
+)
 from telegram.ext import ContextTypes, ConversationHandler
-from flows.block_flow import block_start_alert
 from flows.morning_flow import morning_flow
+from lib.api_handler import get_google_oauth_login_url, get_user
 from utils.constants import DAY_START_TIME
-from utils.job_queue import add_daily_job, add_once_job
+from utils.job_queue import add_daily_job
 from utils.logger_config import configure_logger
 from utils.utils import send_message, send_on_error_message, update_chat_data_state
 
@@ -36,19 +41,51 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context=context,
     )
 
-    await add_once_job(
-        callback=block_start_alert,
-        when=(datetime.now() + timedelta(minutes=4)),
-        chat_id=int(context.chat_data["chat_id"]),
-        context=context,
-        data="<task_name>",
-    )
+    # await add_once_job(
+    #     callback=block_start_alert,
+    #     when=(datetime.now() + timedelta(minutes=4)),
+    #     chat_id=int(context.chat_data["chat_id"]),
+    #     context=context,
+    #     data="<task_name>",
+    # )
 
     await send_message(
         update,
         context,
         "hey there :)\nI am nova,\nyour personal assistant 💪🏽",
     )
+
+    user = get_user(context.chat_data["chat_id"])
+
+    if user.get("google_refresh_token") is None:
+        url = get_google_oauth_login_url(
+            telegram_user_id=context.chat_data["chat_id"],
+            username=update.message.from_user.username or "user",
+        )
+
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "Click me!", callback_data="event_creation_confirm", url=url
+                ),
+            ],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await send_message(
+            update,
+            context,
+            "Login to Google Calendar to get started!",
+            reply_markup=reply_markup,
+        )
+    else:
+        username = user.get("username")
+
+        await send_message(
+            update,
+            context,
+            f"Welcome back {username}! 😊",
+        )
 
 
 @update_chat_data_state

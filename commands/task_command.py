@@ -260,7 +260,6 @@ async def task_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TY
 
 @update_chat_data_state
 async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    
     # TODO: Get event/task/habit data
     add_calendar_item(
         refresh_token=(context.user_data or {}).get("google_refresh_token", None),

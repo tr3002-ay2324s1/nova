@@ -108,19 +108,19 @@ async def event_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error("context.chat_data is None for event_command_end")
         await send_on_error_message(context)
         return
-    
+
     title: str = (
         context.chat_data["new_event"]["title"] if context.chat_data is not None else ""
     )
     date_str: str = (
         context.chat_data["new_event"]["date"] if context.chat_data is not None else ""
-    ) # MMDD format
+    )  # MMDD format
 
     start_time_str: str = (
         context.chat_data["new_event"]["start_time"]
         if context.chat_data is not None
         else ""
-    ) # HHMM format
+    )  # HHMM format
 
     # Convert to datetime object from date and start_time_str
     start_time = datetime.strptime(date_str + start_time_str, "%m%d%H%M")
@@ -137,7 +137,7 @@ async def event_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if title == "" or date_str == "" or start_time_str == "" or end_time_str == "":
         logger.error("title or date or start_time or end_time is empty for handle_text")
         await send_on_error_message(context)
-        return    
+        return
     user = get_user(context.chat_data["chat_id"])
 
     logger.info("Refresh: " + str(user.get("google_refresh_token", "")))
