@@ -2,6 +2,8 @@ from typing import List, TypedDict
 from requests import request, post
 from os import getenv
 
+from utils.constants import BASE_URL
+
 
 class Task(TypedDict):
     userId: str
@@ -10,12 +12,12 @@ class Task(TypedDict):
     deadline: str  # MMDD
 
 
-def get_user(user_id: str):
-    # Make a HTTP request to BASE_URL/users/{user_id}
+def get_user(tele_user_id: str):
+    # Make a HTTP request to BASE_URL/users/telegram/{user_id}
 
     user_res = request(
         method="GET",
-        url=f"{getenv('REQUEST_URL')}/users/telegram/" + user_id,
+        url=f"{BASE_URL}/users/telegram/" + tele_user_id,
         headers={
             "Content-Type": "application/json",
         },
@@ -25,6 +27,6 @@ def get_user(user_id: str):
     return user
 
 
-def add_tasks(tasks: List[Task]):
-    url_post = f"{getenv('REQUEST_URL')}/tasks"
-    post(url_post, json=tasks)
+def add_tasks(task: Task):
+    url_post = f"{BASE_URL}/tasks"
+    post(url_post, json=task)
