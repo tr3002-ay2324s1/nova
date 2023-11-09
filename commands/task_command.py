@@ -1,3 +1,4 @@
+from typing import List
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -6,6 +7,7 @@ from telegram import (
 from telegram.ext import ContextTypes, ConversationHandler
 from lib.api_handler import add_tasks, get_user
 from lib.google_cal import (
+    GoogleCalendarEventMinimum,
     NovaEvent,
     add_calendar_item,
     find_next_available_time_slot,
@@ -70,7 +72,7 @@ async def task_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     title: str = context.chat_data["new_task"]["title"] or ""
-    dateline: str = context.chat_data["new_task"]["dateline"] or ""
+    deadline: str = context.chat_data["new_task"]["deadline"] or ""
     duration: str = context.chat_data["new_task"]["duration"] or "0"
 
     duration_minutes = int(duration)
@@ -87,13 +89,13 @@ async def task_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     # check if deadline is within a week
-    if is_within_a_week(dateline):
+    if is_within_a_week(deadline):
         user_id = context.chat_data["chat_id"]
         user = get_user(user_id)
         time_min, time_max = get_datetimes_till_end_of_day()
 
         has_empty_slot = bool(
-            await find_next_available_time_slot(
+            find_next_available_time_slot(
                 refresh_token=user.get("google_refresh_token", ""),
                 time_min=time_min,
                 time_max=time_max,
@@ -113,7 +115,7 @@ async def task_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "userId": context.chat_data["chat_id"],
                 "name": context.chat_data["new_task"]["title"] or "New Task",
                 "duration": int(context.chat_data["new_task"]["duration"] or "0"),
-                "deadline": context.chat_data["new_task"]["dateline"] or "",
+                "deadline": context.chat_data["new_task"]["deadline"] or "",
             }
         )
     else:
@@ -123,7 +125,7 @@ async def task_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "userId": context.chat_data["chat_id"],
                 "name": context.chat_data["new_task"]["title"] or "New Task",
                 "duration": int(context.chat_data["new_task"]["duration"] or "0"),
-                "deadline": context.chat_data["new_task"]["dateline"] or "",
+                "deadline": context.chat_data["new_task"]["deadline"] or "",
             }
         )
 
@@ -137,9 +139,11 @@ async def task_schedule_yes_update(update, context):
 
     user = get_user(context.chat_data["chat_id"])
     time_min, time_max = get_datetimes_till_end_of_day()
+    title: str = context.chat_data["new_task"]["title"]
+    deadline: str = context.chat_data["new_task"]["deadline"]
     duration: str = context.chat_data["new_task"]["duration"] or "0"
     duration_minutes = int(duration)
-    time_slot = await find_next_available_time_slot(
+    time_slot = find_next_available_time_slot(
         refresh_token=user.get("google_refresh_token", ""),
         time_min=time_min,
         time_max=time_max,
@@ -153,22 +157,41 @@ async def task_schedule_yes_update(update, context):
 
     start_time, end_time = time_slot
 
-    add_calendar_item(
-        refresh_token=user.get("google_refresh_token", ""),
-        summary=context.chat_data["new_task"]["title"] or "New Task",
-        start_time=start_time,
-        end_time=end_time,
-        event_type=NovaEvent.TASK,
-    )
+    context.chat_data["new_task"]["start_time"] = start_time.isoformat()
+    context.chat_data["new_task"]["end_time"] = end_time.isoformat()
 
-    cal_schedule_events_str = get_readable_cal_event_str(
-        get_calendar_events(
-            refresh_token=user.get("google_refresh_token", None),
-            timeMin=time_min.isoformat(),
-            timeMax=time_max.isoformat(),
-            k=15,
-        )
+    events_full = get_calendar_events(
+        refresh_token=user.get("google_refresh_token", None),
+        timeMin=time_min.isoformat(),
+        timeMax=time_max.isoformat(),
+        k=15,
     )
+    events = [
+        GoogleCalendarEventMinimum(
+            start=event["start"],
+            end=event["end"],
+            summary=event["summary"],
+        )
+        for event in events_full
+    ]
+    events.extend(
+        [
+            {
+                "start": {
+                    "dateTime": start_time.isoformat(),
+                    "timeZone": "America/New_York",
+                    "date": None,
+                },
+                "end": {
+                    "dateTime": end_time.isoformat(),
+                    "timeZone": "America/New_York",
+                    "date": None,
+                },
+                "summary": title,
+            }
+        ]
+    )
+    cal_schedule_events_str = get_readable_cal_event_str(events)
 
     keyboard = [
         [
@@ -255,14 +278,22 @@ async def task_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TY
 
 @update_chat_data_state
 async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: Get event/task/habit data
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for task_creation")
+        await send_on_error_message(context)
+        return
+    user_id = context.chat_data["chat_id"]
+    user = get_user(user_id)
+    title: str = context.chat_data["new_task"]["title"]
+    start_time: str = context.chat_data["new_task"]["start_time"]
+    end_time: str = context.chat_data["new_task"]["end_time"]
+
     add_calendar_item(
-        refresh_token=(context.user_data or {}).get("google_refresh_token", None),
-        summary="test",  # TODO: REPLACE
-        start_time=datetime.now(tz=NEW_YORK_TIMEZONE_INFO),  # TODO: REPLACE
-        end_time=datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
-        + timedelta(minutes=30),  # TODO: REPLACE
-        event_type=NovaEvent.TASK,  # TODO: REPLACE
+        refresh_token=user.get("google_refresh_token", ""),
+        summary=title,  
+        start_time=datetime.fromisoformat(start_time),
+        end_time=datetime.fromisoformat(end_time),
+        event_type=NovaEvent.TASK, 
     )
 
     if context.chat_data is not None:

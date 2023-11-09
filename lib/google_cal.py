@@ -1,5 +1,6 @@
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Sequence, TypedDict, Union
+from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
+from typing_extensions import TypedDict
 from datetime import datetime, timedelta
 from os import getenv
 from google.auth.transport.requests import Request
@@ -8,6 +9,7 @@ from googleapiclient.discovery import build
 from utils.constants import (
     GOOGLE_CAL_BASE_URL,
     GOOGLE_SCOPES,
+    NEW_YORK_TIMEZONE_INFO,
 )
 
 
@@ -168,6 +170,10 @@ class GoogleCalendarReceivedEvent(TypedDict):
     attendees: List[GoogleCalendarAttendee]
     extendedProperties: Optional[GoogleCalendarCreateEventExtendedProperties]
 
+class GoogleCalendarEventMinimum(TypedDict):
+    start: GoogleCalendarEventTiming
+    end: GoogleCalendarEventTiming
+    summary: str
 
 class GoogleCalendarCreateEvent(TypedDict):
     kind: Literal["calendar#event"]
@@ -252,11 +258,10 @@ def get_google_cal_link(telegram_user_id: Optional[int]):
         return GOOGLE_CAL_BASE_URL
 
 
-def get_readable_cal_event_str(events: Sequence[GoogleCalendarReceivedEvent]):
+def get_readable_cal_event_str(events: Sequence[GoogleCalendarEventMinimum]):
     event_summary_strs = []
     for event in events:
         if "start" in event and "dateTime" in event.get("start"):
-            # Guaranteed to be present because of if else
             event_datetime_str: str = event["start"]["dateTime"]  # type: ignore
             event_summary_strs.append(
                 str(
@@ -264,7 +269,7 @@ def get_readable_cal_event_str(events: Sequence[GoogleCalendarReceivedEvent]):
                     + " @ "
                     + datetime.strptime(
                         event_datetime_str,
-                        "%Y-%m-%dT%H:%M:%S%z",
+                        "%Y-%m-%dT%H:%M:%S.%f%z",
                     ).strftime("%H:%M")
                 )
             )
@@ -362,7 +367,7 @@ def add_calendar_item(
         "end": end_obj,
         "extendedProperties": {
             "private": {
-                "nova_type": event_type,
+                "nova_type": event_type.value,
             },
             "shared": {},
         },
@@ -401,12 +406,33 @@ def update_calendar_event(
     )
 
 
-async def find_next_available_time_slot(
+def merge_events(
+    events: Sequence[GoogleCalendarReceivedEvent],
+) -> List[GoogleCalendarReceivedEvent]:
+    # Merge overlapping events to simplify conflict checking
+    sorted_events = sorted(
+        events, key=lambda e: datetime.fromisoformat(e["start"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)))
+    )
+    merged_events = []
+    for event in sorted_events:
+        if not merged_events or datetime.fromisoformat(
+            merged_events[-1]["end"]["dateTime"]
+        ) <= datetime.fromisoformat(event["start"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))):
+            merged_events.append(event)
+        else:
+            merged_events[-1]["end"]["dateTime"] = max(
+                datetime.fromisoformat(merged_events[-1]["end"]["dateTime"]),
+                datetime.fromisoformat(event["end"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))),
+            ).isoformat()
+    return merged_events
+
+
+def find_next_available_time_slot(
     refresh_token: str,
     time_min: datetime,
     time_max: datetime,
     event_duration_minutes: int,
-):
+) -> Optional[Tuple[datetime, datetime]]:
     events = get_calendar_events(
         refresh_token=refresh_token,
         timeMin=time_min.isoformat(),
@@ -414,36 +440,77 @@ async def find_next_available_time_slot(
         k=500,
     )
 
-    # Loop from minimum time
-    curr = time_min
-    # O(n^2) time complexity but n is small so it's fine
-    while curr < time_max:
-        # Check if there is a scheduling conflict
-        def is_scheduling_conflict(
-            start_time: datetime,
-            end_time: datetime,
-            events: Sequence[GoogleCalendarReceivedEvent],
-        ):
-            for event in events:
-                if (
-                    event.get("start")
-                    and event.get("end")
-                    and event.get("start").get("dateTime")
-                    and event.get("end").get("dateTime")
-                ):
-                    event_start_time = datetime.fromisoformat(event.get("start").get("dateTime"))  # type: ignore
-                    event_end_time = datetime.fromisoformat(event.get("end").get("dateTime"))  # type: ignore
-                    if start_time < event_end_time or end_time > event_start_time:
-                        return True
-            return False
+    # Preprocess events to merge overlapping ones
+    merged_events = merge_events(events)
 
-        if not is_scheduling_conflict(
-            curr, curr + timedelta(minutes=event_duration_minutes), events
-        ):
-            return curr, curr + timedelta(minutes=event_duration_minutes)
-        else:
-            curr += timedelta(minutes=event_duration_minutes)
+    # Start from minimum time
+    available_start = time_min
+
+    for event in merged_events:
+        event_end = datetime.fromisoformat(event["end"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)))
+        # If there is enough time between the current available start and the next event's start, return the time slot
+        if available_start + timedelta(minutes=event_duration_minutes) <= event_end:
+            return available_start, available_start + timedelta(
+                minutes=event_duration_minutes
+            )
+        # Move the available start to the end of the current event
+        available_start = max(available_start, event_end)
+
+    # After all events, check if there is enough time before time_max
+    if available_start + timedelta(minutes=event_duration_minutes) <= time_max:
+        return available_start, available_start + timedelta(
+            minutes=event_duration_minutes
+        )
+
+    # If no slot is found, return None
     return None
+
+
+# async def find_next_available_time_slot(
+#     refresh_token: str,
+#     time_min: datetime,
+#     time_max: datetime,
+#     event_duration_minutes: int,
+# ):
+#     events = get_calendar_events(
+#         refresh_token=refresh_token,
+#         timeMin=time_min.isoformat(),
+#         timeMax=time_max.isoformat(),
+#         k=500,
+#     )
+
+#     raise Exception(json.dumps(events))
+
+#     # Loop from minimum time
+#     curr = time_min
+#     # O(n^2) time complexity but n is small so it's fine
+#     while curr < time_max:
+#         # Check if there is a scheduling conflict
+#         def is_scheduling_conflict(
+#             start_time: datetime,
+#             end_time: datetime,
+#             events: Sequence[GoogleCalendarReceivedEvent],
+#         ):
+#             for event in events:
+#                 if (
+#                     event.get("start")
+#                     and event.get("end")
+#                     and event.get("start").get("dateTime")
+#                     and event.get("end").get("dateTime")
+#                 ):
+#                     event_start_time = datetime.fromisoformat(event.get("start").get("dateTime"))  # type: ignore
+#                     event_end_time = datetime.fromisoformat(event.get("end").get("dateTime"))  # type: ignore
+#                     if start_time < event_end_time or end_time > event_start_time:
+#                         return True
+#             return False
+
+#         if not is_scheduling_conflict(
+#             curr, curr + timedelta(minutes=event_duration_minutes), events
+#         ):
+#             return curr, curr + timedelta(minutes=event_duration_minutes)
+#         else:
+#             curr += timedelta(minutes=event_duration_minutes)
+#     return None
 
 
 # async def refresh_daily_jobs_with_google_cal(

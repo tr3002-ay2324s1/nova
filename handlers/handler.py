@@ -189,7 +189,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.chat_data["new_task"]["title"] = text
         await task_deadline(update, context)
     elif state == "task_deadline":
-        context.chat_data["new_task"]["dateline"] = text
+        context.chat_data["new_task"]["deadline"] = text
         await task_duration(update, context)
     elif state == "task_duration":
         context.chat_data["new_task"]["duration"] = text
