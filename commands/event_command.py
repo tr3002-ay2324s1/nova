@@ -6,6 +6,7 @@ from telegram import (
 from telegram.ext import ContextTypes, ConversationHandler
 from lib.api_handler import add_tasks, get_user
 from lib.google_cal import NovaEvent, add_calendar_item
+from utils.constants import NEW_YORK_TIMEZONE_INFO
 from utils.logger_config import configure_logger
 from utils.utils import send_message, send_on_error_message, update_chat_data_state
 from dotenv import load_dotenv
@@ -123,7 +124,11 @@ async def event_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )  # HHMM format
 
     # Convert to datetime object from date and start_time_str
-    start_time = datetime.strptime(date_str + start_time_str, "%m%d%H%M")
+    current_year = datetime.now(tz=NEW_YORK_TIMEZONE_INFO).year
+
+    start_time = datetime.strptime(
+        str(datetime.now().year) + date_str + start_time_str, "%Y%m%d%H%M"
+    )
 
     end_time_str: str = (
         context.chat_data["new_event"]["end_time"]
@@ -132,7 +137,9 @@ async def event_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     # Convert to datetime object from date and end_time_str
-    end_time = datetime.strptime(date_str + end_time_str, "%m%d%H%M")
+    end_time = datetime.strptime(
+        str(datetime.now().year) + date_str + end_time_str, "%Y%m%d%H%M"
+    )
 
     if title == "" or date_str == "" or start_time_str == "" or end_time_str == "":
         logger.error("title or date or start_time or end_time is empty for handle_text")

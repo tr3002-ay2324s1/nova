@@ -347,63 +347,25 @@ def add_calendar_item(
 
     service = build("calendar", "v3", credentials=creds)
 
-    start_obj: GoogleCalendarEventTiming = {
+    start_obj = {
         "timeZone": "America/New_York",
         "dateTime": start_time.isoformat(),
-        "date": None,
     }
-    end_obj: GoogleCalendarEventTiming = {
+    end_obj = {
         "timeZone": "America/New_York",
         "dateTime": end_time.isoformat(),
-        "date": None,
     }
 
-    event: GoogleCalendarCreateEvent = {
+    event = {
         "summary": summary,
         "start": start_obj,
         "end": end_obj,
-        "attendees": [],
-        "eventType": "default",
-        "anyoneCanAddSelf": False,
-        "guestsCanInviteOthers": False,
-        "guestsCanModify": False,
-        "attachments": [],
-        "attendeesOmitted": False,
-        "colorId": None,
-        "conferenceData": None,
-        "created": None,
-        "creator": None,
-        "endTimeUnspecified": False,
-        "etag": None,
         "extendedProperties": {
             "private": {
                 "nova_type": event_type,
             },
             "shared": {},
         },
-        "gadget": None,
-        "guestsCanSeeOtherGuests": False,
-        "description": None,
-        "hangoutLink": None,
-        "htmlLink": None,
-        "iCalUID": None,
-        "id": None,
-        "kind": "calendar#event",
-        "locked": False,
-        "location": None,
-        "organizer": None,
-        "originalStartTime": None,
-        "privateCopy": False,
-        "recurrence": [],
-        "recurringEventId": None,
-        "reminders": None,
-        "sequence": None,
-        "source": None,
-        "status": str(GoogleCalendarEventStatus.CONFIRMED),
-        "transparency": None,
-        "updated": None,
-        "visibility": str(GoogleCalendarEventVisibility.PRIVATE),
-        "workingLocationProperties": None,
     }
 
     event_res = service.events().insert(calendarId="primary", body=event).execute()
