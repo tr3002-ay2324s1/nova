@@ -11,6 +11,13 @@ class Task(TypedDict):
     duration: int
     deadline: str  # MMDD
 
+
+class Habit(TypedDict):
+    userId: str
+    name: str
+    frequency: int
+
+
 def get_google_oauth_login_url(telegram_user_id: str, username: str):
     # Make a HTTP GET request to BASE_URL/get_google_oauth_url
 
@@ -49,3 +56,8 @@ def get_user(tele_user_id: str):
 def add_tasks(task: Task):
     url_post = f"{BASE_URL}/tasks"
     post(url_post, json=task)
+
+
+def add_habit(habit: Habit):
+    url_post = f"{BASE_URL}/"
+    post(url_post, json=habits)

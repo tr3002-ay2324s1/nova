@@ -409,19 +409,22 @@ def update_calendar_event(
 def merge_events(
     events: Sequence[GoogleCalendarReceivedEvent],
 ) -> List[GoogleCalendarReceivedEvent]:
+    """
+    Merge overlapping events to simplify conflict checking
+    """
     # Merge overlapping events to simplify conflict checking
     sorted_events = sorted(
-        events, key=lambda e: datetime.fromisoformat(e["start"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)))
+        events, key=lambda e: datetime.fromisoformat(e["start"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat()))
     )
     merged_events = []
     for event in sorted_events:
         if not merged_events or datetime.fromisoformat(
-            merged_events[-1]["end"]["dateTime"]
+            merged_events[-1]["end"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))
         ) <= datetime.fromisoformat(event["start"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))):
             merged_events.append(event)
         else:
             merged_events[-1]["end"]["dateTime"] = max(
-                datetime.fromisoformat(merged_events[-1]["end"]["dateTime"]),
+                datetime.fromisoformat(merged_events[-1]["end"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))),
                 datetime.fromisoformat(event["end"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))),
             ).isoformat()
     return merged_events

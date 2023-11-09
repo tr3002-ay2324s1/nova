@@ -13,6 +13,17 @@ def get_datetimes_till_end_of_day() -> Tuple[datetime, datetime]:
 
     return gen_now(), gen_end_of_day()
 
+def get_closest_week() -> Tuple[datetime, datetime]:
+    # Preserve timezone info in lambdas for precision
+    gen_closest_sunday_midnight = lambda: datetime.now(tz=NEW_YORK_TIMEZONE_INFO).replace(
+        hour=0, minute=0, second=0
+    ) + timedelta(days=6 - datetime.now(tz=NEW_YORK_TIMEZONE_INFO).weekday())
+    gen_next_saturday_midnight = lambda: (gen_closest_sunday_midnight() + timedelta(days=6)).replace(
+        hour=23, minute=59, second=59
+    )
+
+    return gen_closest_sunday_midnight(), gen_next_saturday_midnight()
+
 
 def is_within_a_week(date_string: str):
     # Convert the current date to the "MMDD" format
