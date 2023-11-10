@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
 from typing_extensions import TypedDict
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from os import getenv
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -170,10 +170,12 @@ class GoogleCalendarReceivedEvent(TypedDict):
     attendees: List[GoogleCalendarAttendee]
     extendedProperties: Optional[GoogleCalendarCreateEventExtendedProperties]
 
+
 class GoogleCalendarEventMinimum(TypedDict):
     start: GoogleCalendarEventTiming
     end: GoogleCalendarEventTiming
     summary: str
+
 
 class GoogleCalendarCreateEvent(TypedDict):
     kind: Literal["calendar#event"]
@@ -414,20 +416,46 @@ def merge_events(
     """
     # Merge overlapping events to simplify conflict checking
     sorted_events = sorted(
-        events, key=lambda e: datetime.fromisoformat(e["start"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat()))
+        events,
+        key=lambda e: datetime.fromisoformat(
+            e["start"].get(
+                "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat()
+            )
+        ),
     )
     merged_events = []
     for event in sorted_events:
         if not merged_events or datetime.fromisoformat(
-            merged_events[-1]["end"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))
-        ) <= datetime.fromisoformat(event["start"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))):
+            merged_events[-1]["end"].get(
+                "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
+            )
+        ) <= datetime.fromisoformat(
+            event["start"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))
+        ):
             merged_events.append(event)
         else:
             merged_events[-1]["end"]["dateTime"] = max(
-                datetime.fromisoformat(merged_events[-1]["end"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))),
-                datetime.fromisoformat(event["end"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))),
+                datetime.fromisoformat(
+                    merged_events[-1]["end"].get(
+                        "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
+                    )
+                ),
+                datetime.fromisoformat(
+                    event["end"].get(
+                        "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
+                    )
+                ),
             ).isoformat()
     return merged_events
+
+
+START_BUSINESS_TIME = time(8, 0)
+END_BUSINESS_TIME = time(18, 0)
+
+
+def is_within_business_hours(check_time: datetime) -> bool:
+    """Check if the time is within the business hours."""
+    return START_BUSINESS_TIME <= check_time.time() < END_BUSINESS_TIME
 
 
 def find_next_available_time_slot(
@@ -446,21 +474,44 @@ def find_next_available_time_slot(
     # Preprocess events to merge overlapping ones
     merged_events = merge_events(events)
 
-    # Start from minimum time
-    available_start = time_min
+    # Adjust start time to be within business hours if necessary
+    if time_min.time() < START_BUSINESS_TIME:
+        available_start = datetime.combine(time_min.date(), START_BUSINESS_TIME)
+    elif time_min.time() >= END_BUSINESS_TIME:
+        next_day = time_min.date() + timedelta(days=1)
+        available_start = datetime.combine(next_day, START_BUSINESS_TIME)
+    else:
+        available_start = time_min
 
     for event in merged_events:
-        event_end = datetime.fromisoformat(event["end"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)))
-        # If there is enough time between the current available start and the next event's start, return the time slot
-        if available_start + timedelta(minutes=event_duration_minutes) <= event_end:
-            return available_start, available_start + timedelta(
-                minutes=event_duration_minutes
-            )
-        # Move the available start to the end of the current event
-        available_start = max(available_start, event_end)
+        event_start = datetime.fromisoformat(
+            event["start"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))
+        )
+        event_end = datetime.fromisoformat(
+            event["end"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))
+        )
 
-    # After all events, check if there is enough time before time_max
-    if available_start + timedelta(minutes=event_duration_minutes) <= time_max:
+        # Check if there is enough time before this event starts
+        potential_end = available_start + timedelta(minutes=event_duration_minutes)
+        if (
+            potential_end <= event_start
+            and is_within_business_hours(potential_end)
+            and potential_end <= time_max
+        ):
+            return available_start, potential_end
+
+        # Move the available start to the end of the current event if it overlaps
+        if available_start < event_end:
+            available_start = event_end
+            # If the event ends after business hours, move to the start of the next business day
+            if not is_within_business_hours(available_start):
+                next_day = available_start.date() + timedelta(days=1)
+                available_start = datetime.combine(next_day, START_BUSINESS_TIME)
+
+    # Final check if there is enough time after the last event before time_max
+    if available_start + timedelta(
+        minutes=event_duration_minutes
+    ) <= time_max and is_within_business_hours(available_start):
         return available_start, available_start + timedelta(
             minutes=event_duration_minutes
         )
