@@ -193,12 +193,14 @@ async def task_schedule_yes_update(update, context):
     )
     cal_schedule_events_str = get_readable_cal_event_str(events)
 
+    url = get_google_cal_link((context.user_data or {}).get("telegram_user_id", None))
+
     keyboard = [
         [
             InlineKeyboardButton("Looks Good!", callback_data="task_creation_confirm"),
         ],
         [
-            InlineKeyboardButton("Edit", callback_data="task_creation_edit"),
+            InlineKeyboardButton("Edit", callback_data="task_creation_edit", url=url),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -244,13 +246,9 @@ async def task_creation_edit(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 @update_chat_data_state
 async def task_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    url = get_google_cal_link((context.user_data or {}).get("telegram_user_id", None))
-
     keyboard = [
         [
-            InlineKeyboardButton(
-                "Yes", callback_data="task_schedule_edit_yes", url=url
-            ),
+            InlineKeyboardButton("Yes", callback_data="task_schedule_edit_yes"),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
