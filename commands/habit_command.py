@@ -11,11 +11,10 @@ from lib.google_cal import (
     GoogleCalendarEventMinimum,
     get_calendar_events,
     get_google_cal_link,
-    get_readable_cal_event_str,
     merge_events,
 )
 from utils.constants import NEW_YORK_TIMEZONE_INFO
-from utils.datetime_utils import get_closest_week, get_datetimes_till_end_of_day
+from utils.datetime_utils import get_closest_week
 from utils.logger_config import configure_logger
 from utils.utils import (
     send_message,

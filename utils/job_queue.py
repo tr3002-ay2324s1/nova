@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 import pytz
 from flows.morning_flow import morning_flow
-from utils.constants import DAY_START_TIME
+from utils.constants import DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
 
 from utils.logger_config import configure_logger
 from utils.utils import send_on_error_message
@@ -43,7 +43,7 @@ async def add_once_job(
     remove_job_if_exists(job_name, context)
 
     # Explicitly set the time zone to America/New_York
-    when = when.replace(tzinfo=pytz.timezone("America/New_York"))
+    when = when.replace(tzinfo=NEW_YORK_TIMEZONE_INFO)
 
     if context.job_queue is not None:
         context.job_queue.run_once(
@@ -68,24 +68,19 @@ async def add_daily_job(
     remove_job_if_exists(job_name, context)
 
     # Explicitly set the time zone to America/New_York
-    time = time.replace(tzinfo=pytz.timezone("America/New_York"))
-
-    days = (
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-    )  # The job will run every day (0=Monday, 1=Tuesday, ..., 6=Sunday)
+    time = time.replace(tzinfo=NEW_YORK_TIMEZONE_INFO)
 
     if context.job_queue is not None:
         context.job_queue.run_daily(
-            callback, time, days, chat_id=chat_id, name=job_name, data=data
+            callback,
+            time,
+            days=tuple(range(7)),
+            chat_id=chat_id,
+            name=job_name,
+            data=data,
         )
 
-        logger.info(f"Daily job {job_name} added for {chat_id} at {time} every {days}")
+        logger.info(f"Daily job {job_name} added for {chat_id} at {time}")
 
 
 async def clear_cron_jobs(context: ContextTypes.DEFAULT_TYPE):

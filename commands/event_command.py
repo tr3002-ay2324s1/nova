@@ -123,9 +123,6 @@ async def event_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else ""
     )  # HHMM format
 
-    # Convert to datetime object from date and start_time_str
-    current_year = datetime.now(tz=NEW_YORK_TIMEZONE_INFO).year
-
     start_time = datetime.strptime(
         str(datetime.now(tz=NEW_YORK_TIMEZONE_INFO).year) + date_str + start_time_str, "%Y%m%d%H%M"
     )

@@ -7,6 +7,8 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from utils.constants import (
+    DAY_END_TIME,
+    DAY_START_TIME,
     GOOGLE_CAL_BASE_URL,
     GOOGLE_SCOPES,
     NEW_YORK_TIMEZONE_INFO,
@@ -449,13 +451,9 @@ def merge_events(
     return merged_events
 
 
-START_BUSINESS_TIME = time(8, 0)
-END_BUSINESS_TIME = time(18, 0)
-
-
 def is_within_business_hours(check_time: datetime) -> bool:
     """Check if the time is within the business hours."""
-    return START_BUSINESS_TIME <= check_time.time() < END_BUSINESS_TIME
+    return DAY_START_TIME <= check_time.time() < DAY_END_TIME
 
 
 def find_next_available_time_slot(
@@ -475,11 +473,11 @@ def find_next_available_time_slot(
     merged_events = merge_events(events)
 
     # Adjust start time to be within business hours if necessary
-    if time_min.time() < START_BUSINESS_TIME:
-        available_start = datetime.combine(time_min.date(), START_BUSINESS_TIME)
-    elif time_min.time() >= END_BUSINESS_TIME:
+    if time_min.time() < DAY_START_TIME:
+        available_start = datetime.combine(time_min.date(), DAY_START_TIME, tzinfo=NEW_YORK_TIMEZONE_INFO)
+    elif time_min.time() >= DAY_END_TIME:
         next_day = time_min.date() + timedelta(days=1)
-        available_start = datetime.combine(next_day, START_BUSINESS_TIME)
+        available_start = datetime.combine(next_day, DAY_END_TIME, tzinfo=NEW_YORK_TIMEZONE_INFO)
     else:
         available_start = time_min
 
@@ -506,7 +504,7 @@ def find_next_available_time_slot(
             # If the event ends after business hours, move to the start of the next business day
             if not is_within_business_hours(available_start):
                 next_day = available_start.date() + timedelta(days=1)
-                available_start = datetime.combine(next_day, START_BUSINESS_TIME)
+                available_start = datetime.combine(next_day, DAY_START_TIME, tzinfo=NEW_YORK_TIMEZONE_INFO)
 
     # Final check if there is enough time after the last event before time_max
     if available_start + timedelta(
