@@ -1,17 +1,22 @@
-from decimal import Context
-from sqlalchemy import update
+from datetime import datetime, timedelta
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Update,
 )
 from telegram.ext import ContextTypes, ConversationHandler
+from lib.api_handler import get_user
+from lib.google_cal import (
+    get_calendar_events,
+    get_google_cal_link,
+    get_readable_cal_event_str,
+)
+from utils.constants import DAY_END_TIME, DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
 from utils.logger_config import configure_logger
 from utils.utils import (
     send_message,
     send_on_error_message,
     update_chat_data_state,
-    update_chat_data_state_context,
 )
 
 logger = configure_logger()
@@ -39,8 +44,28 @@ async def night_flow_review(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 @update_chat_data_state
 async def night_flow_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: get schedule from calendar
-    schedule = ""
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for event_creation")
+        await send_on_error_message(context)
+        return
+
+    user_id = context.chat_data["chat_id"]
+    user = get_user(user_id)
+    events = get_calendar_events(
+        refresh_token=user.get("google_refresh_token", None),
+        timeMin=datetime.combine(
+            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
+            DAY_START_TIME,
+            tzinfo=NEW_YORK_TIMEZONE_INFO,
+        ).isoformat(),
+        timeMax=datetime.combine(
+            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
+            DAY_END_TIME,
+            tzinfo=NEW_YORK_TIMEZONE_INFO,
+        ).isoformat(),
+        k=150,
+    )
+    schedule = get_readable_cal_event_str(events) or "No upcoming events found."
 
     await send_message(
         update,
@@ -131,19 +156,45 @@ async def night_flow_review_complete(
         "Now, let's plan your day for tomorrow...",
     )
 
+    await night_flow_tomorrow_schedule(update, context)
+
 
 @update_chat_data_state
 async def night_flow_tomorrow_schedule(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for event_creation")
+        await send_on_error_message(context)
+        return
+
     await send_message(
         update,
         context,
         "Here's your schedule for tomorrow",
     )
 
-    # TODO: get tomorrow schedule from calendar
-    tomorrow_schedule = ""
+    user_id = context.chat_data["chat_id"]
+    user = get_user(user_id)
+    tomorrow_events = get_calendar_events(
+        refresh_token=user.get("google_refresh_token", None),
+        timeMin=datetime.combine(
+            (datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(days=1)).date(),
+            DAY_START_TIME,
+            tzinfo=NEW_YORK_TIMEZONE_INFO,
+        ).isoformat(),
+        timeMax=datetime.combine(
+            (datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(days=1)).date(),
+            DAY_END_TIME,
+            tzinfo=NEW_YORK_TIMEZONE_INFO,
+        ).isoformat(),
+        k=150,
+    )
+    tomorrow_schedule = (
+        get_readable_cal_event_str(tomorrow_events) or "No upcoming events found."
+    )
+
+    url = get_google_cal_link(user_id)
 
     keyboard = [
         [
@@ -153,7 +204,7 @@ async def night_flow_tomorrow_schedule(
         ],
         [
             InlineKeyboardButton(
-                "Edit", callback_data="night_flow_tomorrow_schedule_edit"
+                "Edit", callback_data="night_flow_tomorrow_schedule_edit", url=url
             ),
         ],
     ]
@@ -171,9 +222,6 @@ async def night_flow_tomorrow_schedule(
 async def night_flow_tomorrow_schedule_complete(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
-    # TODO: get tomorrow schedule from calendar
-    # TODO: update cron jobs
-
     await send_message(
         update,
         context,
@@ -199,8 +247,6 @@ async def night_flow_tomorrow_schedule_complete(
 async def night_flow_tomorrow_schedule_edit(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
-    # TODO: direct to google calendar
-
     keyboard = [
         [
             InlineKeyboardButton(
@@ -224,10 +270,30 @@ async def night_flow_tomorrow_schedule_updated(
 ):
     # TODO: sync gcal with database
 
-    # TODO: get schedule from calendar
-    tomorrow_schedule = ""
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for event_creation")
+        await send_on_error_message(context)
+        return
 
-    # TODO: update cron jobs
+    user_id = context.chat_data["chat_id"]
+    user = get_user(user_id)
+    tomorrow_events = get_calendar_events(
+        refresh_token=user.get("google_refresh_token", None),
+        timeMin=datetime.combine(
+            (datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(days=1)).date(),
+            DAY_START_TIME,
+            tzinfo=NEW_YORK_TIMEZONE_INFO,
+        ).isoformat(),
+        timeMax=datetime.combine(
+            (datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(days=1)).date(),
+            DAY_END_TIME,
+            tzinfo=NEW_YORK_TIMEZONE_INFO,
+        ).isoformat(),
+        k=150,
+    )
+    tomorrow_schedule = (
+        get_readable_cal_event_str(tomorrow_events) or "No upcoming events found."
+    )
 
     await send_message(
         update,

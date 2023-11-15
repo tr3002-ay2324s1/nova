@@ -13,6 +13,7 @@ from lib.google_cal import (
 )
 from utils.constants import DAY_END_TIME, DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
 from utils.logger_config import configure_logger
+from utils.update_cron_jobs import update_cron_jobs
 from utils.utils import (
     send_message,
     send_on_error_message,
@@ -50,12 +51,14 @@ async def morning_flow(context: ContextTypes.DEFAULT_TYPE) -> None:
     )
     schedule = get_readable_cal_event_str(events) or "No upcoming events found."
 
+    url = get_google_cal_link(user_id)
+
     keyboard = [
         [
             InlineKeyboardButton("Ok!", callback_data="morning_flow_confirm"),
         ],
         [
-            InlineKeyboardButton("Edit", callback_data="morning_flow_edit"),
+            InlineKeyboardButton("Edit", callback_data="morning_flow_edit", url=url),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -67,12 +70,11 @@ async def morning_flow(context: ContextTypes.DEFAULT_TYPE) -> None:
 async def morning_flow_schedule_edit(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
-    url = get_google_cal_link((context.user_data or {}).get("telegram_user_id", None))
-
     keyboard = [
         [
             InlineKeyboardButton(
-                "Yes", callback_data="task_schedule_edit_yes", url=url
+                "Yes",
+                callback_data="task_schedule_edit_yes",
             ),
         ],
     ]
@@ -92,8 +94,7 @@ async def morning_flow_schedule_updated(
 ):
     # TODO: sync gcal with database
 
-    # TODO: update cron jobs
-    
+    await update_cron_jobs(context)
 
     await send_message(
         update,
@@ -106,6 +107,6 @@ async def morning_flow_schedule_updated(
 
 @update_chat_data_state
 async def morning_flow_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await send_message(None, context, "Great!")
+    await send_message(update, context, "Great!")
 
     return ConversationHandler.END

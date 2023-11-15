@@ -299,15 +299,15 @@ async def habit_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
             end_time=datetime_slot + timedelta(minutes=int(duration)),
             rrules=["RRULE:FREQ=WEEKLY;"],
         )
-    
-    cal_link = get_google_cal_link(user_id)
+
+    url = get_google_cal_link(user_id)
 
     keyboard = [
         [
             InlineKeyboardButton("Looks Good!", callback_data="habit_creation_confirm"),
         ],
         [
-            InlineKeyboardButton("Edit", callback_data="habit_creation_edit", url=cal_link),
+            InlineKeyboardButton("Edit", callback_data="habit_creation_edit", url=url),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -322,13 +322,9 @@ async def habit_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @update_chat_data_state
 async def habit_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    url = get_google_cal_link((context.user_data or {}).get("telegram_user_id", None))
-
     keyboard = [
         [
-            InlineKeyboardButton(
-                "Yes", callback_data="habit_schedule_edit_yes", url=url
-            ),
+            InlineKeyboardButton("Yes", callback_data="habit_schedule_edit_yes"),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)

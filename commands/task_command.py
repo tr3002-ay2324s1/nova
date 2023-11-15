@@ -136,7 +136,8 @@ async def task_schedule_yes_update(update, context):
         "Since the deadline is less than a week, I have found time for you to get it done today!",
     )
 
-    user = get_user(context.chat_data["chat_id"])
+    user_id = context.chat_data["chat_id"]
+    user = get_user(user_id)
     time_min, time_max = get_datetimes_till_end_of_day()
     title: str = context.chat_data["new_task"]["title"]
     deadline: str = context.chat_data["new_task"]["deadline"]
@@ -192,7 +193,7 @@ async def task_schedule_yes_update(update, context):
     )
     cal_schedule_events_str = get_readable_cal_event_str(events)
 
-    url = get_google_cal_link((context.user_data or {}).get("telegram_user_id", None))
+    url = get_google_cal_link(user_id)
 
     keyboard = [
         [

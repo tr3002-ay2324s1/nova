@@ -6,8 +6,16 @@ from telegram import (
 )
 from telegram.ext import ContextTypes, ConversationHandler
 from flows.night_flow import night_flow_review
+from lib.api_handler import get_user
+from lib.google_cal import (
+    get_calendar_events,
+    get_google_cal_link,
+    get_readable_cal_event_str,
+)
+from utils.constants import DAY_END_TIME, DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
 from utils.job_queue import add_once_job
 from utils.logger_config import configure_logger
+from utils.update_cron_jobs import update_cron_jobs
 from utils.utils import (
     send_message,
     send_on_error_message,
@@ -28,6 +36,13 @@ async def block_start_alert(context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error("context.job.name is None for block_alert")
         await send_on_error_message(context)
         return
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for block_alert")
+        await send_on_error_message(context)
+        return
+
+    user_id = context.chat_data["chat_id"]
+    url = get_google_cal_link(user_id)
 
     keyboard = [
         [
@@ -35,7 +50,7 @@ async def block_start_alert(context: ContextTypes.DEFAULT_TYPE) -> None:
         ],
         [
             InlineKeyboardButton(
-                "Change of Plans", callback_data="block_flow_schedule_edit"
+                "Change of Plans", callback_data="block_flow_schedule_edit", url=url
             ),
         ],
     ]
@@ -70,13 +85,17 @@ async def block_start_alert_confirm(update: Update, context: ContextTypes.DEFAUL
         data="<task_name>",
     )
 
+    await send_message(
+        update,
+        context,
+        "Great!",
+    )
+
     return ConversationHandler.END
 
 
 @update_chat_data_state
 async def block_flow_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: direct to google calendar
-
     keyboard = [
         [
             InlineKeyboardButton("Yes", callback_data="block_flow_schedule_edit_yes"),
@@ -96,12 +115,32 @@ async def block_flow_schedule_edit(update: Update, context: ContextTypes.DEFAULT
 async def block_flow_schedule_updated(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for event_creation")
+        await send_on_error_message(context)
+        return
+
     # TODO: sync gcal with database
 
-    # TODO: get schedule from calendar
-    schedule = ""
+    user_id = context.chat_data["chat_id"]
+    user = get_user(user_id)
+    events = get_calendar_events(
+        refresh_token=user.get("google_refresh_token", None),
+        timeMin=datetime.combine(
+            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
+            DAY_START_TIME,
+            tzinfo=NEW_YORK_TIMEZONE_INFO,
+        ).isoformat(),
+        timeMax=datetime.combine(
+            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
+            DAY_END_TIME,
+            tzinfo=NEW_YORK_TIMEZONE_INFO,
+        ).isoformat(),
+        k=150,
+    )
+    schedule = get_readable_cal_event_str(events) or "No upcoming events found."
 
-    # TODO: update cron jobs
+    await update_cron_jobs(context)
 
     await send_message(
         update,
@@ -114,11 +153,29 @@ async def block_flow_schedule_updated(
 
 @update_chat_data_state
 async def block_next_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: get schedule from calendar
-    schedule = ""
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for event_creation")
+        await send_on_error_message(context)
+        return
 
-    # TODO: check if there is any upcoming block for the day
-    has_upcoming_block = False
+    user_id = context.chat_data["chat_id"]
+    user = get_user(user_id)
+    events = get_calendar_events(
+        refresh_token=user.get("google_refresh_token", None),
+        timeMin=datetime.combine(
+            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
+            DAY_START_TIME,
+            tzinfo=NEW_YORK_TIMEZONE_INFO,
+        ).isoformat(),
+        timeMax=datetime.combine(
+            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
+            DAY_END_TIME,
+            tzinfo=NEW_YORK_TIMEZONE_INFO,
+        ).isoformat(),
+        k=150,
+    )
+
+    has_upcoming_block = len(events) == 0
 
     if has_upcoming_block:
         task = ""

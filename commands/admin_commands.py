@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -5,10 +6,10 @@ from telegram import (
     Update,
 )
 from telegram.ext import ContextTypes, ConversationHandler
-from flows.morning_flow import morning_flow
+from flows.block_flow import block_start_alert
 from lib.api_handler import get_google_oauth_login_url, get_user
-from utils.constants import DAY_START_TIME
-from utils.job_queue import add_daily_job
+from utils.add_morning_flow import add_morning_flow
+from utils.job_queue import add_once_job
 from utils.logger_config import configure_logger
 from utils.utils import send_message, send_on_error_message, update_chat_data_state
 
@@ -32,21 +33,15 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # note that chat_id and user_id are the same for private chat
     context.chat_data["chat_id"] = str(update.message.chat_id)
 
-    # add morning flow job
-    await add_daily_job(
-        callback=morning_flow,
-        time=DAY_START_TIME,
+    await add_morning_flow(context)
+
+    await add_once_job(
+        callback=block_start_alert,
+        when=(datetime.now() + timedelta(minutes=4)),
         chat_id=int(context.chat_data["chat_id"]),
         context=context,
+        data="<task_name>",
     )
-
-    # await add_once_job(
-    #     callback=morning_flow,
-    #     when=(datetime.now() + timedelta(minutes=4)),
-    #     chat_id=int(context.chat_data["chat_id"]),
-    #     context=context,
-    #     data="<task_name>",
-    # )
 
     await send_message(
         update,
