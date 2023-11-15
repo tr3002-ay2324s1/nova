@@ -1,10 +1,7 @@
 from datetime import datetime, time
 from typing import Optional
-from telegram import Update
 from telegram.ext import ContextTypes
-import pytz
-from flows.morning_flow import morning_flow
-from utils.constants import DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
+from utils.constants import NEW_YORK_TIMEZONE_INFO
 
 from utils.logger_config import configure_logger
 from utils.utils import send_on_error_message
@@ -96,11 +93,3 @@ async def clear_cron_jobs(context: ContextTypes.DEFAULT_TYPE):
     for job in context.job_queue.jobs():
         job.schedule_removal()
         logger.info(f"Job {job} removed")
-
-    # add back morning flow
-    await add_daily_job(
-        callback=morning_flow,
-        time=DAY_START_TIME,
-        chat_id=context.chat_data["chat_id"],
-        context=context,
-    )

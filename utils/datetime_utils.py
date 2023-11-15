@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Tuple
+from typing import List, Tuple
 
 from utils.constants import NEW_YORK_TIMEZONE_INFO
 
@@ -13,16 +13,22 @@ def get_datetimes_till_end_of_day() -> Tuple[datetime, datetime]:
 
     return gen_now(), gen_end_of_day()
 
-def get_closest_week() -> Tuple[datetime, datetime]:
-    # Preserve timezone info in lambdas for precision
-    gen_closest_sunday_midnight = lambda: datetime.now(tz=NEW_YORK_TIMEZONE_INFO).replace(
-        hour=0, minute=0, second=0
-    ) + timedelta(days=6 - datetime.now(tz=NEW_YORK_TIMEZONE_INFO).weekday())
-    gen_next_saturday_midnight = lambda: (gen_closest_sunday_midnight() + timedelta(days=6)).replace(
-        hour=23, minute=59, second=59
-    )
 
-    return gen_closest_sunday_midnight(), gen_next_saturday_midnight()
+def get_closest_week() -> Tuple[datetime, datetime]:
+    """
+    Get the closest week, starting from Sunday 0000 and ending on Saturday 2359.
+    """
+    # Preserve timezone info in lambdas for precision
+    gen_closest_sunday_midnight = lambda: datetime.now(
+        tz=NEW_YORK_TIMEZONE_INFO
+    ).replace(hour=0, minute=0, second=0) + timedelta(
+        days=6 - datetime.now(tz=NEW_YORK_TIMEZONE_INFO).weekday()
+    )
+    gen_next_saturday_night = lambda: (
+        gen_closest_sunday_midnight() + timedelta(days=6)
+    ).replace(hour=23, minute=59, second=59)
+
+    return gen_closest_sunday_midnight(), gen_next_saturday_night()
 
 
 def is_within_a_week(date_string: str):
@@ -46,3 +52,23 @@ def is_within_a_week(date_string: str):
         return True
     else:
         return False
+
+def get_prettified_time_slots(slots: List[datetime]) -> str:
+    """
+    Given a list of datetime objects, return a string of the form:
+    "
+      Monday 8:00 AM - 9:00 AM
+      Wednesday 9:00 AM - 10:00 AM
+      Thursday 10:00 AM - 11:00 AM
+    "
+    """
+    if not slots:
+        return "No available slots"
+
+    individual_slot_strings = []
+    for slot in slots:
+        # Prettify slot
+        individual_slot_strings.append(slot.strftime("%A %I:%M %p"))
+    
+    # Join the prettified slots with a newline
+    return "\n".join(individual_slot_strings)

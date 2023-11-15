@@ -124,7 +124,8 @@ async def event_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )  # HHMM format
 
     start_time = datetime.strptime(
-        str(datetime.now(tz=NEW_YORK_TIMEZONE_INFO).year) + date_str + start_time_str, "%Y%m%d%H%M"
+        str(datetime.now(tz=NEW_YORK_TIMEZONE_INFO).year) + date_str + start_time_str,
+        "%Y%m%d%H%M",
     )
 
     end_time_str: str = (
@@ -135,7 +136,8 @@ async def event_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Convert to datetime object from date and end_time_str
     end_time = datetime.strptime(
-        str(datetime.now(tz=NEW_YORK_TIMEZONE_INFO).year) + date_str + end_time_str, "%Y%m%d%H%M"
+        str(datetime.now(tz=NEW_YORK_TIMEZONE_INFO).year) + date_str + end_time_str,
+        "%Y%m%d%H%M",
     )
 
     if title == "" or date_str == "" or start_time_str == "" or end_time_str == "":

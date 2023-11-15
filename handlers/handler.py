@@ -52,6 +52,7 @@ from flows.night_flow import (
 )
 
 from utils.logger_config import configure_logger
+from utils.unknown_response import unknown_command, unknown_text
 from utils.utils import send_on_error_message
 
 logger = configure_logger()
@@ -139,6 +140,8 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await night_flow_tomorrow_schedule_edit(update, context)
     elif query.data == "night_flow_tomorrow_schedule_edit_yes":
         await night_flow_tomorrow_schedule_updated(update, context)
+    else:
+        await unknown_command(update, context)
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -227,3 +230,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif state == "night_flow_comment":
         context.chat_data["night_flow_review"]["comment"] = text
         await night_flow_review_complete(update, context)
+
+    else:
+        await unknown_text(update, context)

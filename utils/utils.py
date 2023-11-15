@@ -1,6 +1,4 @@
-from datetime import datetime
 from functools import wraps
-from typing import Tuple
 from telegram import (
     Update,
     InlineKeyboardMarkup,
@@ -9,7 +7,6 @@ from telegram import (
     ForceReply,
 )
 from telegram.ext import ContextTypes
-from utils.constants import NEW_YORK_TIMEZONE_INFO
 from utils.logger_config import configure_logger
 
 logger = configure_logger()
