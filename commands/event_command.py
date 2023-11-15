@@ -4,7 +4,7 @@ from telegram import (
     Update,
 )
 from telegram.ext import ContextTypes, ConversationHandler
-from lib.api_handler import add_tasks, get_user
+from lib.api_handler import get_user
 from lib.google_cal import NovaEvent, add_calendar_item
 from utils.constants import NEW_YORK_TIMEZONE_INFO
 from utils.logger_config import configure_logger

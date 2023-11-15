@@ -1,4 +1,3 @@
-from typing import List
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -15,7 +14,6 @@ from lib.google_cal import (
     get_google_cal_link,
     get_readable_cal_event_str,
 )
-from utils.constants import NEW_YORK_TIMEZONE_INFO
 from utils.datetime_utils import get_datetimes_till_end_of_day, is_within_a_week
 from utils.logger_config import configure_logger
 from dotenv import load_dotenv

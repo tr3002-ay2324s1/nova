@@ -60,4 +60,4 @@ def add_tasks(task: Task):
 
 def add_habit(habit: Habit):
     url_post = f"{BASE_URL}/"
-    post(url_post, json=habits)
+    post(url_post, json=habit)
