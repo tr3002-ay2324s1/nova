@@ -96,11 +96,3 @@ async def clear_cron_jobs(context: ContextTypes.DEFAULT_TYPE):
     for job in context.job_queue.jobs():
         job.schedule_removal()
         logger.info(f"Job {job} removed")
-
-    # add back morning flow
-    await add_daily_job(
-        callback=morning_flow,
-        time=DAY_START_TIME,
-        chat_id=context.chat_data["chat_id"],
-        context=context,
-    )

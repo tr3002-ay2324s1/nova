@@ -288,10 +288,10 @@ async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_calendar_item(
         refresh_token=user.get("google_refresh_token", ""),
-        summary=title,  
+        summary=title,
         start_time=datetime.fromisoformat(start_time),
         end_time=datetime.fromisoformat(end_time),
-        event_type=NovaEvent.TASK, 
+        event_type=NovaEvent.TASK,
     )
 
     if context.chat_data is not None:

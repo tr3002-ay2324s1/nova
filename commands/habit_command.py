@@ -72,8 +72,12 @@ def calculate_free_blocks(
 
     for event in merged_events:
         # Calculate the free block between the previous event and the current event
-        event_start = datetime.fromisoformat(event.get("start").get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)))
-        event_end = datetime.fromisoformat(event.get("end").get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)))
+        event_start = datetime.fromisoformat(
+            event.get("start").get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))
+        )
+        event_end = datetime.fromisoformat(
+            event.get("end").get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))
+        )
         if event_start > previous_event_end:
             free_blocks.append(event_start - previous_event_end)
         previous_event_end = event_end
@@ -93,7 +97,9 @@ def rank_days(events: List[GoogleCalendarEventMinimum]) -> List[tuple]:
     events_by_day = {}
 
     for event in events:
-        event_start = datetime.fromisoformat(event.get("start").get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)))
+        event_start = datetime.fromisoformat(
+            event.get("start").get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))
+        )
         day = event_start.date()
         if day not in events_by_day:
             events_by_day[day] = []
@@ -104,11 +110,14 @@ def rank_days(events: List[GoogleCalendarEventMinimum]) -> List[tuple]:
     for day, day_events in events_by_day.items():
         day_start = datetime(day.year, day.month, day.day)
         day_end = day_start + timedelta(days=1)
-        merged_day_events = [GoogleCalendarEventMinimum(
-            start=e.get("start"),
-            end=e.get("end"),
-            summary=e.get("summary"),
-        ) for e in merge_events(day_events)]
+        merged_day_events = [
+            GoogleCalendarEventMinimum(
+                start=e.get("start"),
+                end=e.get("end"),
+                summary=e.get("summary"),
+            )
+            for e in merge_events(day_events)
+        ]
         free_blocks = calculate_free_blocks(merged_day_events, day_start, day_end)
         free_time_by_day[day] = sum(free_blocks, timedelta())
 
@@ -148,13 +157,16 @@ async def habit_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     merged_events = merge_events(events)
-    ranked_days = rank_days([
-        GoogleCalendarEventMinimum(
-            start=e.get("start"),
-            end=e.get("end"),
-            summary=e.get("summary"),
-        ) for e in merged_events
-    ])
+    ranked_days = rank_days(
+        [
+            GoogleCalendarEventMinimum(
+                start=e.get("start"),
+                end=e.get("end"),
+                summary=e.get("summary"),
+            )
+            for e in merged_events
+        ]
+    )
 
     logger.info(ranked_days)
 
