@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 from functools import wraps
 from telegram import (
     Update,
@@ -8,10 +7,6 @@ from telegram import (
     ForceReply,
 )
 from telegram.ext import ContextTypes
-from flows.block_flow import block_start_alert
-from flows.morning_flow import morning_flow
-from utils.constants import DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
-from utils.job_queue import add_daily_job, add_once_job, clear_cron_jobs
 from utils.logger_config import configure_logger
 
 logger = configure_logger()
@@ -88,32 +83,3 @@ async def send_on_error_message(context: ContextTypes.DEFAULT_TYPE) -> None:
         context=context,
         text="Something went wrong. Please try again later or contact @juliussneezer04 for help!",
     )
-
-
-async def update_cron_jobs(context: ContextTypes.DEFAULT_TYPE, events) -> None:
-    if context.chat_data is None:
-        logger.error("context.chat_data is None for update_cron_jobs")
-        await send_on_error_message(context)
-        return
-
-    await clear_cron_jobs(context)
-
-    # add back morning flow
-    await add_daily_job(
-        callback=morning_flow,
-        time=DAY_START_TIME,
-        chat_id=context.chat_data["chat_id"],
-        context=context,
-    )
-
-    for event in events:
-        name = ""
-        start_time = datetime.now() + timedelta(minutes=4)
-
-        await add_once_job(
-            callback=block_start_alert,
-            when=start_time,
-            chat_id=int(context.chat_data["chat_id"]),
-            context=context,
-            data=name,
-        )

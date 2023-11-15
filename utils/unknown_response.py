@@ -7,6 +7,7 @@ from utils.utils import send_message, update_chat_data_state
 
 logger = configure_logger()
 
+
 @update_chat_data_state
 async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message is not None and update.message.text is not None:

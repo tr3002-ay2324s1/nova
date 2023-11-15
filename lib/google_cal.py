@@ -159,8 +159,8 @@ class GoogleCalendarReceivedEvent(TypedDict):
     originalStartTime: GoogleCalendarEventTiming
     end: GoogleCalendarEventTiming
     endTimeUnspecified: bool
-    summary: str
-    description: str
+    summary: str  # Always there
+    description: str  # Not always there
     status: GoogleCalendarEventStatus
     id: str
     creator: GoogleCalendarPerson
@@ -284,7 +284,7 @@ def get_calendar_events(
     *,
     refresh_token,
     timeMin=datetime.utcnow().isoformat() + "Z",  # 'Z' indicates UTC time
-    timeMax=None,
+    timeMax=(datetime.utcnow() + timedelta(days=30)).isoformat() + "Z",
     k=10,
 ) -> List[
     GoogleCalendarReceivedEvent
@@ -330,15 +330,7 @@ def get_calendar_events(
     else:
         return events
 
-
-def add_calendar_item(
-    *,
-    refresh_token: str,
-    summary: str,
-    start_time: datetime,
-    end_time: datetime,
-    event_type: NovaEvent,
-):
+def get_google_cal_service(refresh_token: str):
     CLIENT_ID = getenv("GOOGLE_CLIENT_ID")
     CLIENT_SECRET = getenv("GOOGLE_CLIENT_SECRET")
     creds = Credentials.from_authorized_user_info(
@@ -355,6 +347,17 @@ def add_calendar_item(
             creds.refresh(Request())
 
     service = build("calendar", "v3", credentials=creds)
+    return service
+
+def add_calendar_item(
+    *,
+    refresh_token: str,
+    summary: str,
+    start_time: datetime,
+    end_time: datetime,
+    event_type: NovaEvent,
+):
+    service = get_google_cal_service(refresh_token)
 
     start_obj = {
         "timeZone": "America/New_York",
@@ -378,6 +381,32 @@ def add_calendar_item(
     }
 
     event_res = service.events().insert(calendarId="primary", body=event).execute()
+
+def add_recurring_calendar_item(
+    *,
+    refresh_token: str,
+    summary: str,
+    start_time: datetime,
+    end_time: datetime,
+    rrules: List[str],
+):
+    service = get_google_cal_service(refresh_token)
+    start_obj = {
+        "timeZone": "America/New_York",
+        "dateTime": start_time.isoformat(),
+    }
+    end_obj = {
+        "timeZone": "America/New_York",
+        "dateTime": end_time.isoformat(),
+    }
+    event = {
+      'summary': summary,
+      'start': start_obj,
+      'end': end_obj,
+      'recurrence': rrules,
+    }
+
+    recurring_event = service.events().insert(calendarId='primary', body=event).execute()
 
 
 def update_calendar_event(
@@ -411,40 +440,52 @@ def update_calendar_event(
 
 
 def merge_events(
-    events: Sequence[GoogleCalendarReceivedEvent],
-) -> List[GoogleCalendarReceivedEvent]:
+    events: Sequence[GoogleCalendarEventMinimum],
+) -> List[GoogleCalendarEventMinimum]:
     """
     Merge overlapping events to simplify conflict checking
     """
     # Merge overlapping events to simplify conflict checking
     sorted_events = sorted(
         events,
+        # Sort by start time in ascending order
         key=lambda e: datetime.fromisoformat(
             e["start"].get(
                 "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat()
             )
         ),
     )
-    merged_events = []
+    merged_events: List[GoogleCalendarEventMinimum] = []
     for event in sorted_events:
-        if not merged_events or datetime.fromisoformat(
-            merged_events[-1]["end"].get(
-                "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
+        has_merged_events = bool(merged_events and len(merged_events) > 0)
+        if not has_merged_events or (
+            event.get("start").get("dateTime")
+            and (
+                datetime.fromisoformat(
+                    merged_events[-1]
+                    .get("end")
+                    .get(
+                        "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat()
+                    )
+                )
+                <= datetime.fromisoformat(
+                    event.get("start").get(
+                        "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat()
+                    )
+                )
             )
-        ) <= datetime.fromisoformat(
-            event["start"].get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))
         ):
             merged_events.append(event)
         else:
             merged_events[-1]["end"]["dateTime"] = max(
                 datetime.fromisoformat(
                     merged_events[-1]["end"].get(
-                        "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
+                        "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat()
                     )
                 ),
                 datetime.fromisoformat(
                     event["end"].get(
-                        "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
+                        "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat()
                     )
                 ),
             ).isoformat()

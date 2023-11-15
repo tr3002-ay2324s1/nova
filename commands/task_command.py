@@ -19,12 +19,13 @@ from utils.constants import NEW_YORK_TIMEZONE_INFO
 from utils.datetime_utils import get_datetimes_till_end_of_day, is_within_a_week
 from utils.logger_config import configure_logger
 from dotenv import load_dotenv
+from utils.update_cron_jobs import update_cron_jobs
 from utils.utils import (
     send_message,
     send_on_error_message,
     update_chat_data_state,
 )
-from datetime import datetime, timedelta
+from datetime import datetime
 
 load_dotenv()
 logger = configure_logger()
@@ -263,7 +264,7 @@ async def task_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 @update_chat_data_state
 async def task_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: update cron jobs
+    await update_cron_jobs(context)
 
     await send_message(
         update,
