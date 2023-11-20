@@ -82,14 +82,28 @@ async def block_start_alert_confirm(update: Update, context: ContextTypes.DEFAUL
 
     name, time = get_name_time_from_job_name(context.job.name)
 
-    # TODO: get block end time
+    # get block end time
+    user_id = context.chat_data["chat_id"]
+    user = get_user(user_id)
+    events = get_calendar_events(
+        refresh_token=user.get("google_refresh_token", ""),
+        q=name,
+        k=1
+    )
+    if len(events) != 1:
+        logger.error("Failed to find block")
+        await send_on_error_message(context)
+        return
+    block = events[0]
 
     await add_once_job(
         callback=block_end_alert,
-        when=(datetime.now()),
+        when=(datetime.fromisoformat(
+            block.get("end").get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))
+        )),
         chat_id=context.chat_data["chat_id"],
         context=context,
-        data="<task_name>",
+        data=name,
     )
 
     await send_message(
@@ -212,6 +226,17 @@ async def block_next_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @update_chat_data_state_context
 async def block_end_alert(context: ContextTypes.DEFAULT_TYPE) -> None:
+    if context.job is None:
+        logger.error("context.job is None for block_start_alert_confirm")
+        await send_on_error_message(context)
+        return
+    if context.job.name is None:
+        logger.error("context.job.name is None for block_start_alert_confirm")
+        await send_on_error_message(context)
+        return
+    
+    name, time = get_name_time_from_job_name(context.job.name)
+
     keyboard = [
         [
             InlineKeyboardButton("Yes", callback_data="block_end_alert_yes"),
@@ -225,7 +250,7 @@ async def block_end_alert(context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_message(
         None,
         context,
-        "Time's up! Did you get it done?",
+        "Time's up! Did you get " + name + " done?",
         reply_markup=reply_markup,
     )
 
