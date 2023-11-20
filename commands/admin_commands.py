@@ -37,7 +37,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await add_once_job(
         callback=block_start_alert,
-        when=(datetime.now() + timedelta(minutes=4)),
+        when=(datetime.now() + timedelta(hours=3, minutes=4)),
         chat_id=int(context.chat_data["chat_id"]),
         context=context,
         data="<task_name>",

@@ -58,7 +58,7 @@ async def block_start_alert(context: ContextTypes.DEFAULT_TYPE) -> None:
     # assume that job name suffix does not contain underscore
     parts = context.job.name.split("_")
     time = parts[4]
-    name = parts[7]
+    name = "_".join(parts[7:])
 
     await send_message(
         None,
