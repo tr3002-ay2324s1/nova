@@ -283,8 +283,9 @@ def get_readable_cal_event_str(events: Sequence[GoogleCalendarEventMinimum]):
 def get_calendar_events(
     *,
     refresh_token,
-    timeMin=datetime.utcnow().isoformat() + "Z",  # 'Z' indicates UTC time
-    timeMax=(datetime.utcnow() + timedelta(days=30)).isoformat() + "Z",
+    q: Optional[str] = None, # Query string for calendar name, summary, description, etc.
+    timeMin: Optional[str] = datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat() + "Z",  # 'Z' indicates UTC time
+    timeMax: Optional[str] =(datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(days=30)).isoformat() + "Z",
     k=10,
 ) -> List[
     GoogleCalendarReceivedEvent
@@ -309,6 +310,9 @@ def get_calendar_events(
 
     # Call the Calendar API
     print(f"Getting the upcoming {k} events")
+    if not timeMin and not timeMax and not q:
+        print("Time min or time max or q not set")
+        return []
     events_result: GoogleCalendarGetEventsResponse = (
         service.events()
         .list(
@@ -316,6 +320,7 @@ def get_calendar_events(
             timeMin=timeMin,
             timeMax=timeMax,
             maxResults=k,
+            q=q,
             singleEvents=True,
             orderBy="startTime",
             timeZone="America/New_York",
@@ -407,6 +412,12 @@ def add_recurring_calendar_item(
         "start": start_obj,
         "end": end_obj,
         "recurrence": rrules,
+        "extendedProperties": {
+            "private": {
+                "nova_type": NovaEvent.HABIT.value,
+            },
+            "shared": {},
+        },
     }
 
     recurring_event = (

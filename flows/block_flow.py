@@ -56,9 +56,11 @@ async def block_start_alert(context: ContextTypes.DEFAULT_TYPE) -> None:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    # assume that once job for block is of the form once_{callback.__name__}_{when_formatted}_{chat_id}{job_name_suffix}
+    # assume that job name suffix does not contain underscore
     parts = context.job.name.split("_")
-    time = parts[3]
-    name = parts[6]
+    time = parts[4]
+    name = parts[7]
 
     await send_message(
         None,
@@ -74,6 +76,18 @@ async def block_start_alert_confirm(update: Update, context: ContextTypes.DEFAUL
         logger.error("context.chat_data is None for block_start_alert_confirm")
         await send_on_error_message(context)
         return
+    if context.job is None:
+        logger.error("context.job is None for block_start_alert_confirm")
+        await send_on_error_message(context)
+        return
+    if context.job.name is None:
+        logger.error("context.job.name is None for block_start_alert_confirm")
+        await send_on_error_message(context)
+        return
+    
+    parts = context.job.name.split("_")
+    time = parts[4]
+    name = parts[7]
 
     # TODO: get block end time
 
@@ -250,5 +264,6 @@ async def block_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @update_chat_data_state
 async def block_created(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # TODO: create new event on gcal
+    # add_calendar_item
 
     await block_flow_schedule_updated(update, context)

@@ -8,6 +8,7 @@ from telegram import (
 )
 from telegram.ext import ContextTypes
 from utils.logger_config import configure_logger
+from typing import Optional, Union, Literal
 
 logger = configure_logger()
 
@@ -51,13 +52,16 @@ async def send_message(
     | ReplyKeyboardRemove
     | ForceReply
     | None = None,
+    parse_mode: str | None = None
 ):
     if update is not None and update.message is not None:
-        await update.message.reply_text(text, reply_markup=reply_markup)
+        await update.message.reply_text(
+            text, reply_markup=reply_markup, parse_mode=parse_mode
+        )
         return
 
     if update is not None and update.effective_message is not None:
-        await update.effective_message.reply_text(text, reply_markup=reply_markup)
+        await update.effective_message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
         return
 
     if (
@@ -65,7 +69,7 @@ async def send_message(
         and update.callback_query is not None
         and update.callback_query.message is not None
     ):
-        await update.callback_query.message.reply_text(text, reply_markup=reply_markup)
+        await update.callback_query.message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
         return
 
     if context.job is not None and context.job.chat_id is not None:
@@ -73,6 +77,7 @@ async def send_message(
             context.job.chat_id,
             text=text,
             reply_markup=reply_markup,
+            parse_mode=parse_mode
         )
         return
 
