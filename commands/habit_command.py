@@ -299,15 +299,13 @@ async def habit_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
             end_time=datetime_slot + timedelta(minutes=int(duration)),
             rrules=["RRULE:FREQ=WEEKLY;"],
         )
-    
-    cal_link = get_google_cal_link(user_id)
 
     keyboard = [
         [
             InlineKeyboardButton("Looks Good!", callback_data="habit_creation_confirm"),
         ],
         [
-            InlineKeyboardButton("Edit", callback_data="habit_creation_edit", url=cal_link),
+            InlineKeyboardButton("Edit", callback_data="habit_creation_edit"),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
