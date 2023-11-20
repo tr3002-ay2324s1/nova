@@ -13,6 +13,7 @@ from lib.google_cal import (
     get_readable_cal_event_str,
 )
 from utils.constants import DAY_END_TIME, DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
+from utils.get_name_time_from_job_name import get_name_time_from_job_name
 from utils.job_queue import add_once_job
 from utils.logger_config import configure_logger
 from utils.update_cron_jobs import update_cron_jobs
@@ -54,11 +55,7 @@ async def block_start_alert(context: ContextTypes.DEFAULT_TYPE) -> None:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # assume that once job for block is of the form once_{callback.__name__}_{when_formatted}_{chat_id}{job_name_suffix}
-    # assume that job name suffix does not contain underscore
-    parts = context.job.name.split("_")
-    time = parts[4]
-    name = "_".join(parts[7:])
+    name, time = get_name_time_from_job_name(context.job.name)
 
     await send_message(
         None,
@@ -83,9 +80,7 @@ async def block_start_alert_confirm(update: Update, context: ContextTypes.DEFAUL
         await send_on_error_message(context)
         return
 
-    parts = context.job.name.split("_")
-    time = parts[4]
-    name = parts[7]
+    name, time = get_name_time_from_job_name(context.job.name)
 
     # TODO: get block end time
 

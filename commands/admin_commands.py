@@ -9,6 +9,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from flows.block_flow import block_start_alert
 from lib.api_handler import get_google_oauth_login_url, get_user
 from utils.add_morning_flow import add_morning_flow
+from utils.constants import CURRENT_DATETIME
 from utils.job_queue import add_once_job
 from utils.logger_config import configure_logger
 from utils.utils import send_message, send_on_error_message, update_chat_data_state
@@ -37,7 +38,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await add_once_job(
         callback=block_start_alert,
-        when=(datetime.now() + timedelta(hours=3, minutes=4)),
+        when=CURRENT_DATETIME,
         chat_id=int(context.chat_data["chat_id"]),
         context=context,
         data="<task_name>",
