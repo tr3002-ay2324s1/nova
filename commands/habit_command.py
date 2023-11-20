@@ -300,14 +300,12 @@ async def habit_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
             rrules=["RRULE:FREQ=WEEKLY;"],
         )
 
-    url = get_google_cal_link(user_id)
-
     keyboard = [
         [
             InlineKeyboardButton("Looks Good!", callback_data="habit_creation_confirm"),
         ],
         [
-            InlineKeyboardButton("Edit", callback_data="habit_creation_edit", url=url),
+            InlineKeyboardButton("Edit", callback_data="habit_creation_edit"),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -322,9 +320,15 @@ async def habit_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @update_chat_data_state
 async def habit_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for habit_schedule_edit")
+        await send_on_error_message(context)
+        return
+    user_id = context.chat_data["chat_id"]
+    url = get_google_cal_link(user_id)
     keyboard = [
         [
-            InlineKeyboardButton("Yes", callback_data="habit_schedule_edit_yes"),
+            InlineKeyboardButton("Yes", callback_data="habit_schedule_edit_yes", url=url),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
