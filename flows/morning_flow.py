@@ -99,8 +99,6 @@ async def morning_flow_schedule_edit(
 async def morning_flow_schedule_updated(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
-    # TODO: sync gcal with database
-
     await update_cron_jobs(context)
 
     await send_message(

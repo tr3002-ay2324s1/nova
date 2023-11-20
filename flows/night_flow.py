@@ -268,8 +268,6 @@ async def night_flow_tomorrow_schedule_edit(
 async def night_flow_tomorrow_schedule_updated(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
-    # TODO: sync gcal with database
-
     if context.chat_data is None:
         logger.error("context.chat_data is None for event_creation")
         await send_on_error_message(context)
