@@ -316,7 +316,6 @@ async def habit_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
         get_prettified_time_slots(datetime_slots),
         reply_markup=reply_markup,
     )
-    await send_message(update,context,"test", reply_markup=reply_markup)
 
 
 @update_chat_data_state
@@ -328,18 +327,18 @@ async def habit_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     user_id = context.chat_data["chat_id"]
     url = get_google_cal_link(user_id)
-
-    await send_message(
-        update,
-        context,
-        "<a href=\"" + url + "\">Click to go to Google Calendar</a>", 
-        parse_mode = "HTML",
-    )
-
+    
     keyboard = [
         [
             InlineKeyboardButton(
-                "Yes", callback_data="habit_schedule_edit_yes", url=url
+                "Yes",
+                callback_data="habit_schedule_edit_yes",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                "Click me to go to Google Calendar",
+                url=url,
             ),
         ],
     ]

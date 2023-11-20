@@ -51,14 +51,15 @@ async def morning_flow(context: ContextTypes.DEFAULT_TYPE) -> None:
     )
     schedule = get_readable_cal_event_str(events) or "No upcoming events found."
 
-    url = get_google_cal_link(user_id)
-
     keyboard = [
         [
             InlineKeyboardButton("Ok!", callback_data="morning_flow_confirm"),
         ],
         [
-            InlineKeyboardButton("Edit", callback_data="morning_flow_edit", url=url),
+            InlineKeyboardButton(
+                "Edit",
+                callback_data="morning_flow_edit",
+            ),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -70,11 +71,25 @@ async def morning_flow(context: ContextTypes.DEFAULT_TYPE) -> None:
 async def morning_flow_schedule_edit(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ):
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for event_creation")
+        await send_on_error_message(context)
+        return
+
+    user_id = context.chat_data["chat_id"]
+    url = get_google_cal_link(user_id)
+    
     keyboard = [
         [
             InlineKeyboardButton(
                 "Yes",
                 callback_data="task_schedule_edit_yes",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                "Click me to go to Google Calendar",
+                url=url,
             ),
         ],
     ]

@@ -41,16 +41,14 @@ async def block_start_alert(context: ContextTypes.DEFAULT_TYPE) -> None:
         await send_on_error_message(context)
         return
 
-    user_id = context.chat_data["chat_id"]
-    url = get_google_cal_link(user_id)
-
     keyboard = [
         [
             InlineKeyboardButton("Ok!", callback_data="block_start_alert_confirm"),
         ],
         [
             InlineKeyboardButton(
-                "Change of Plans", callback_data="block_flow_schedule_edit", url=url
+                "Change of Plans",
+                callback_data="block_flow_schedule_edit",
             ),
         ],
     ]
@@ -84,7 +82,7 @@ async def block_start_alert_confirm(update: Update, context: ContextTypes.DEFAUL
         logger.error("context.job.name is None for block_start_alert_confirm")
         await send_on_error_message(context)
         return
-    
+
     parts = context.job.name.split("_")
     time = parts[4]
     name = parts[7]
@@ -110,9 +108,23 @@ async def block_start_alert_confirm(update: Update, context: ContextTypes.DEFAUL
 
 @update_chat_data_state
 async def block_flow_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for block_flow_schedule_edit")
+        await send_on_error_message(context)
+        return
+
+    user_id = context.chat_data["chat_id"]
+    url = get_google_cal_link(user_id)
+
     keyboard = [
         [
             InlineKeyboardButton("Yes", callback_data="block_flow_schedule_edit_yes"),
+        ],
+        [
+            InlineKeyboardButton(
+                "Click me to go to Google Calendar",
+                url=url,
+            ),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)

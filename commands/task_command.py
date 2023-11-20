@@ -193,14 +193,12 @@ async def task_schedule_yes_update(update, context):
     )
     cal_schedule_events_str = get_readable_cal_event_str(events)
 
-    url = get_google_cal_link(user_id)
-
     keyboard = [
         [
             InlineKeyboardButton("Looks Good!", callback_data="task_creation_confirm"),
         ],
         [
-            InlineKeyboardButton("Edit", callback_data="task_creation_edit", url=url),
+            InlineKeyboardButton("Edit", callback_data="task_creation_edit"),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -236,19 +234,24 @@ async def task_schedule_no_update(update: Update, context: ContextTypes.DEFAULT_
 
 
 @update_chat_data_state
-async def task_creation_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await send_message(
-        update,
-        context,
-        "Have you edited your calendar?",
-    )
-
-
-@update_chat_data_state
 async def task_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for task_creation")
+        await send_on_error_message(context)
+        return
+
+    user_id = context.chat_data["chat_id"]
+    url = get_google_cal_link(user_id)
+
     keyboard = [
         [
             InlineKeyboardButton("Yes", callback_data="task_schedule_edit_yes"),
+        ],
+        [
+            InlineKeyboardButton(
+                "Click me to go to Google Calendar",
+                url=url,
+            ),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
