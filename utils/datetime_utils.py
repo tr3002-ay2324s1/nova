@@ -1,17 +1,56 @@
 from datetime import datetime, timedelta
 from typing import List, Tuple
 
-from utils.constants import NEW_YORK_TIMEZONE_INFO
+from utils.constants import DAY_END_TIME, DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
 
 
-def get_datetimes_till_end_of_day() -> Tuple[datetime, datetime]:
-    # Preserve timezone info in lambdas for precision
-    gen_now = lambda: datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
-    gen_end_of_day = lambda: datetime.now(tz=NEW_YORK_TIMEZONE_INFO).replace(
+def get_day_start_end_datetimes() -> Tuple[datetime, datetime]:
+    today_date = datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date()
+    day_start = datetime.combine(
+        today_date,
+        DAY_START_TIME,
+        tzinfo=NEW_YORK_TIMEZONE_INFO,
+    )
+    day_end = datetime.combine(
+        today_date,
+        DAY_END_TIME,
+        tzinfo=NEW_YORK_TIMEZONE_INFO,
+    )
+    return day_start, day_end
+
+
+def get_current_till_day_end_datetimes() -> Tuple[datetime, datetime]:
+    current = datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
+    day_end = datetime.combine(
+        datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
+        DAY_END_TIME,
+        tzinfo=NEW_YORK_TIMEZONE_INFO,
+    )
+    return current, day_end
+
+
+def get_current_till_midnight_datetimes() -> Tuple[datetime, datetime]:
+    current = datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
+    midnight = datetime.now(tz=NEW_YORK_TIMEZONE_INFO).replace(
         hour=23, minute=59, second=59
     )
 
-    return gen_now(), gen_end_of_day()
+    return current, midnight
+
+
+def get_tomorrow_start_end_datetimes() -> Tuple[datetime, datetime]:
+    today_date = (datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(days=1)).date()
+    day_start = datetime.combine(
+        today_date,
+        DAY_START_TIME,
+        tzinfo=NEW_YORK_TIMEZONE_INFO,
+    )
+    day_end = datetime.combine(
+        today_date,
+        DAY_END_TIME,
+        tzinfo=NEW_YORK_TIMEZONE_INFO,
+    )
+    return day_start, day_end
 
 
 def get_closest_week() -> Tuple[datetime, datetime]:
@@ -53,6 +92,7 @@ def is_within_a_week(date_string: str):
     else:
         return False
 
+
 def get_prettified_time_slots(slots: List[datetime]) -> str:
     """
     Given a list of datetime objects, return a string of the form:
@@ -69,6 +109,6 @@ def get_prettified_time_slots(slots: List[datetime]) -> str:
     for slot in slots:
         # Prettify slot
         individual_slot_strings.append(slot.strftime("%A %I:%M %p"))
-    
+
     # Join the prettified slots with a newline
     return "\n".join(individual_slot_strings)

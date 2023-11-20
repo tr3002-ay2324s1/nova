@@ -175,6 +175,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # event_command
     elif state == "event_title":
+        context.chat_data["new_event"] = dict()
         context.chat_data["new_event"]["title"] = text
         await event_date(update, context)
     elif state == "event_date":
@@ -189,6 +190,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # task_command
     elif state == "task_title":
+        context.chat_data["new_task"] = dict()
         context.chat_data["new_task"]["title"] = text
         await task_deadline(update, context)
     elif state == "task_deadline":
@@ -200,6 +202,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # habit_command
     elif state == "habit_title":
+        context.chat_data["new_habit"] = dict()
         context.chat_data["new_habit"]["title"] = text
         await habit_repetition(update, context)
     elif state == "habit_repetition":
@@ -211,7 +214,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # block_flow
     elif state == "block_end_alert_edit":
-        context.chat_data["block_update"]["duration"] = text
+        context.chat_data["new_block"] = dict()
+        context.chat_data["new_block"]["duration"] = text
         await block_update(update, context)
 
     # night_flow

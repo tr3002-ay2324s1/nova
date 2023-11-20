@@ -1,4 +1,3 @@
-from datetime import datetime
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -11,7 +10,7 @@ from lib.google_cal import (
     get_google_cal_link,
     get_readable_cal_event_str,
 )
-from utils.constants import DAY_END_TIME, DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
+from utils.datetime_utils import get_day_start_end_datetimes
 from utils.logger_config import configure_logger
 from utils.update_cron_jobs import update_cron_jobs
 from utils.utils import (
@@ -35,18 +34,11 @@ async def morning_flow(context: ContextTypes.DEFAULT_TYPE) -> None:
 
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
+    timeMin, timeMax = get_day_start_end_datetimes()
     events = get_calendar_events(
         refresh_token=user.get("google_refresh_token", None),
-        timeMin=datetime.combine(
-            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
-            DAY_START_TIME,
-            tzinfo=NEW_YORK_TIMEZONE_INFO,
-        ).isoformat(),
-        timeMax=datetime.combine(
-            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
-            DAY_END_TIME,
-            tzinfo=NEW_YORK_TIMEZONE_INFO,
-        ).isoformat(),
+        timeMin=timeMin.isoformat(),
+        timeMax=timeMax.isoformat(),
         k=150,
     )
     schedule = get_readable_cal_event_str(events) or "No upcoming events found."

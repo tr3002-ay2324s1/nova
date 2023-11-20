@@ -146,8 +146,6 @@ async def event_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user = get_user(context.chat_data["chat_id"])
 
-    logger.info("Refresh: " + str(user.get("google_refresh_token", "")))
-
     add_calendar_item(
         refresh_token=user.get("google_refresh_token", ""),
         summary=title,

@@ -12,6 +12,7 @@ from lib.google_cal import (
     get_readable_cal_event_str,
 )
 from utils.constants import DAY_END_TIME, DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
+from utils.datetime_utils import get_day_start_end_datetimes, get_tomorrow_start_end_datetimes
 from utils.logger_config import configure_logger
 from utils.utils import (
     send_message,
@@ -51,18 +52,11 @@ async def night_flow_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
+    timeMin, timeMax = get_day_start_end_datetimes()
     events = get_calendar_events(
         refresh_token=user.get("google_refresh_token", None),
-        timeMin=datetime.combine(
-            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
-            DAY_START_TIME,
-            tzinfo=NEW_YORK_TIMEZONE_INFO,
-        ).isoformat(),
-        timeMax=datetime.combine(
-            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
-            DAY_END_TIME,
-            tzinfo=NEW_YORK_TIMEZONE_INFO,
-        ).isoformat(),
+        timeMin=timeMin.isoformat(),
+        timeMax=timeMax.isoformat(),
         k=150,
     )
     schedule = get_readable_cal_event_str(events) or "No upcoming events found."
@@ -176,18 +170,11 @@ async def night_flow_tomorrow_schedule(
 
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
+    timeMin, timeMax = get_tomorrow_start_end_datetimes()
     tomorrow_events = get_calendar_events(
         refresh_token=user.get("google_refresh_token", None),
-        timeMin=datetime.combine(
-            (datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(days=1)).date(),
-            DAY_START_TIME,
-            tzinfo=NEW_YORK_TIMEZONE_INFO,
-        ).isoformat(),
-        timeMax=datetime.combine(
-            (datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(days=1)).date(),
-            DAY_END_TIME,
-            tzinfo=NEW_YORK_TIMEZONE_INFO,
-        ).isoformat(),
+        timeMin=timeMin.isoformat(),
+        timeMax=timeMax.isoformat(),
         k=150,
     )
     tomorrow_schedule = (
@@ -290,18 +277,11 @@ async def night_flow_tomorrow_schedule_updated(
 
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
+    timeMin, timeMax = get_tomorrow_start_end_datetimes()
     tomorrow_events = get_calendar_events(
         refresh_token=user.get("google_refresh_token", None),
-        timeMin=datetime.combine(
-            (datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(days=1)).date(),
-            DAY_START_TIME,
-            tzinfo=NEW_YORK_TIMEZONE_INFO,
-        ).isoformat(),
-        timeMax=datetime.combine(
-            (datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(days=1)).date(),
-            DAY_END_TIME,
-            tzinfo=NEW_YORK_TIMEZONE_INFO,
-        ).isoformat(),
+        timeMin=timeMin.isoformat(),
+        timeMax=timeMax.isoformat(),
         k=150,
     )
     tomorrow_schedule = (

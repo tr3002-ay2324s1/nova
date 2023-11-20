@@ -14,7 +14,7 @@ from lib.google_cal import (
     get_google_cal_link,
     get_readable_cal_event_str,
 )
-from utils.datetime_utils import get_datetimes_till_end_of_day, is_within_a_week
+from utils.datetime_utils import get_current_till_midnight_datetimes, is_within_a_week
 from utils.logger_config import configure_logger
 from dotenv import load_dotenv
 from utils.update_cron_jobs import update_cron_jobs
@@ -91,7 +91,7 @@ async def task_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_within_a_week(deadline):
         user_id = context.chat_data["chat_id"]
         user = get_user(user_id)
-        time_min, time_max = get_datetimes_till_end_of_day()
+        time_min, time_max = get_current_till_midnight_datetimes()
 
         has_empty_slot = bool(
             find_next_available_time_slot(
@@ -138,7 +138,7 @@ async def task_schedule_yes_update(update, context):
 
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
-    time_min, time_max = get_datetimes_till_end_of_day()
+    time_min, time_max = get_current_till_midnight_datetimes()
     title: str = context.chat_data["new_task"]["title"]
     deadline: str = context.chat_data["new_task"]["deadline"]
     duration: str = context.chat_data["new_task"]["duration"] or "0"

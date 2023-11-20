@@ -283,9 +283,15 @@ def get_readable_cal_event_str(events: Sequence[GoogleCalendarEventMinimum]):
 def get_calendar_events(
     *,
     refresh_token,
-    q: Optional[str] = None, # Query string for calendar name, summary, description, etc.
-    timeMin: Optional[str] = datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat() + "Z",  # 'Z' indicates UTC time
-    timeMax: Optional[str] =(datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(days=30)).isoformat() + "Z",
+    q: Optional[
+        str
+    ] = None,  # Query string for calendar name, summary, description, etc.
+    timeMin: Optional[str] = datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat()
+    + "Z",  # 'Z' indicates UTC time
+    timeMax: Optional[str] = (
+        datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(days=30)
+    ).isoformat()
+    + "Z",
     k=10,
 ) -> List[
     GoogleCalendarReceivedEvent
@@ -455,14 +461,10 @@ def update_calendar_event(
     )
 
 
-def merge_events(
+def sort_events(
     events: Sequence[GoogleCalendarEventMinimum],
 ) -> List[GoogleCalendarEventMinimum]:
-    """
-    Merge overlapping events to simplify conflict checking
-    """
-    # Merge overlapping events to simplify conflict checking
-    sorted_events = sorted(
+    return sorted(
         events,
         # Sort by start time in ascending order
         key=lambda e: datetime.fromisoformat(
@@ -471,6 +473,16 @@ def merge_events(
             )
         ),
     )
+
+
+def merge_events(
+    events: Sequence[GoogleCalendarEventMinimum],
+) -> List[GoogleCalendarEventMinimum]:
+    """
+    Merge overlapping events to simplify conflict checking
+    """
+    # Merge overlapping events to simplify conflict checking
+    sorted_events = sort_events(events)
     merged_events: List[GoogleCalendarEventMinimum] = []
     for event in sorted_events:
         has_merged_events = bool(merged_events and len(merged_events) > 0)

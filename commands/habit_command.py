@@ -18,6 +18,7 @@ from lib.google_cal import (
 from utils.constants import DAY_END_TIME, DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
 from utils.datetime_utils import get_closest_week, get_prettified_time_slots
 from utils.logger_config import configure_logger
+from utils.update_cron_jobs import update_cron_jobs
 from utils.utils import (
     send_message,
     send_on_error_message,
@@ -354,7 +355,7 @@ async def habit_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 @update_chat_data_state
 async def habit_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: update cron jobs
+    await update_cron_jobs(context)
 
     await send_message(
         update,

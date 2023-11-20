@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, time, timedelta
+from typing import List, Optional
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -8,11 +9,20 @@ from telegram.ext import ContextTypes, ConversationHandler
 from flows.night_flow import night_flow_review
 from lib.api_handler import get_user
 from lib.google_cal import (
+    GoogleCalendarEventMinimum,
+    NovaEvent,
+    add_calendar_item,
     get_calendar_events,
     get_google_cal_link,
     get_readable_cal_event_str,
+    merge_events,
+    sort_events,
 )
 from utils.constants import DAY_END_TIME, DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
+from utils.datetime_utils import (
+    get_current_till_day_end_datetimes,
+    get_day_start_end_datetimes,
+)
 from utils.get_name_time_from_job_name import get_name_time_from_job_name
 from utils.job_queue import add_once_job
 from utils.logger_config import configure_logger
@@ -86,9 +96,7 @@ async def block_start_alert_confirm(update: Update, context: ContextTypes.DEFAUL
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
     events = get_calendar_events(
-        refresh_token=user.get("google_refresh_token", ""),
-        q=name,
-        k=1
+        refresh_token=user.get("google_refresh_token", ""), q=name, k=1
     )
     if len(events) != 1:
         logger.error("Failed to find block")
@@ -98,9 +106,13 @@ async def block_start_alert_confirm(update: Update, context: ContextTypes.DEFAUL
 
     await add_once_job(
         callback=block_end_alert,
-        when=(datetime.fromisoformat(
-            block.get("end").get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO))
-        )),
+        when=(
+            datetime.fromisoformat(
+                block.get("end").get(
+                    "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
+                )
+            )
+        ),
         chat_id=context.chat_data["chat_id"],
         context=context,
         data=name,
@@ -155,22 +167,13 @@ async def block_flow_schedule_updated(
         await send_on_error_message(context)
         return
 
-    # TODO: sync gcal with database
-
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
+    timeMin, timeMax = get_day_start_end_datetimes()
     events = get_calendar_events(
         refresh_token=user.get("google_refresh_token", None),
-        timeMin=datetime.combine(
-            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
-            DAY_START_TIME,
-            tzinfo=NEW_YORK_TIMEZONE_INFO,
-        ).isoformat(),
-        timeMax=datetime.combine(
-            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
-            DAY_END_TIME,
-            tzinfo=NEW_YORK_TIMEZONE_INFO,
-        ).isoformat(),
+        timeMin=timeMin.isoformat(),
+        timeMax=timeMax.isoformat(),
         k=150,
     )
     schedule = get_readable_cal_event_str(events) or "No upcoming events found."
@@ -195,18 +198,11 @@ async def block_next_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
+    timeMin, timeMax = get_day_start_end_datetimes()
     events = get_calendar_events(
         refresh_token=user.get("google_refresh_token", None),
-        timeMin=datetime.combine(
-            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
-            DAY_START_TIME,
-            tzinfo=NEW_YORK_TIMEZONE_INFO,
-        ).isoformat(),
-        timeMax=datetime.combine(
-            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
-            DAY_END_TIME,
-            tzinfo=NEW_YORK_TIMEZONE_INFO,
-        ).isoformat(),
+        timeMin=timeMin.isoformat(),
+        timeMax=timeMax.isoformat(),
         k=150,
     )
 
@@ -234,7 +230,7 @@ async def block_end_alert(context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error("context.job.name is None for block_start_alert_confirm")
         await send_on_error_message(context)
         return
-    
+
     name, time = get_name_time_from_job_name(context.job.name)
 
     keyboard = [
@@ -264,16 +260,104 @@ async def block_end_alert_edit(update: Update, context: ContextTypes.DEFAULT_TYP
     )
 
 
+def find_today_next_available_slot(
+    events: List[GoogleCalendarEventMinimum],
+    duration_str: str,
+) -> Optional[time]:
+    duration: timedelta = timedelta(minutes=int(duration_str))
+
+    # merge events
+    merged_events = merge_events(events)
+
+    if len(merged_events) == 0:
+        return datetime.now(tz=NEW_YORK_TIMEZONE_INFO).time()
+
+    for i in range(len(merged_events) - 1):
+        start_of_buffer = datetime.fromisoformat(
+            merged_events[i]
+            .get("end")
+            .get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat())
+        )
+        end_of_buffer = datetime.fromisoformat(
+            merged_events[i + 1]
+            .get("start")
+            .get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat())
+        )
+        buffer_duration = end_of_buffer - start_of_buffer
+
+        if buffer_duration >= duration:
+            return start_of_buffer.time()
+
+    return None
+
+
 @update_chat_data_state
 async def block_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.chat_data is None:
         logger.error("context.chat_data is None for block_update")
         await send_on_error_message(context)
         return
+    if context.job is None:
+        logger.error("context.job is None for block_update")
+        await send_on_error_message(context)
+        return
+    if context.job.name is None:
+        logger.error("context.job.name is None for block_update")
+        await send_on_error_message(context)
+        return
 
+    name, time = get_name_time_from_job_name(context.job.name)
     duration = context.chat_data["block_update"]["duration"]
-    # TODO: checks for the first free slot
-    time = ""
+
+    user_id = context.chat_data["chat_id"]
+    user = get_user(user_id)
+    timeMin, timeMax = get_current_till_day_end_datetimes()
+    events_full = get_calendar_events(
+        refresh_token=user.get("google_refresh_token", None),
+        timeMin=timeMin.isoformat(),
+        timeMax=timeMax.isoformat(),
+        k=150,
+    )
+    events = [
+        GoogleCalendarEventMinimum(
+            start=event["start"],
+            end=event["end"],
+            summary=event["summary"],
+        )
+        for event in events_full
+    ]
+
+    today_next_available_slot = find_today_next_available_slot(events, duration)
+
+    # TODO: figure out what to do is today_next_available_slot is None
+    if today_next_available_slot is None:
+        logger.info("today_next_available_slot is None for block_update")
+        await send_on_error_message(context)
+        return
+
+    start_time = datetime.combine(
+        datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
+        today_next_available_slot,
+        tzinfo=NEW_YORK_TIMEZONE_INFO,
+    )
+    end_time = datetime.combine(
+        datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
+        today_next_available_slot,
+        tzinfo=NEW_YORK_TIMEZONE_INFO,
+    ) + timedelta(minutes=int(duration))
+
+    context.chat_data["new_block"]["start_time"] = start_time.isoformat()
+    context.chat_data["new_block"]["end_time"] = end_time.isoformat()
+
+    user_id = context.chat_data["chat_id"]
+    user = get_user(user_id)
+    add_calendar_item(
+        refresh_token=user.get("google_refresh_token", ""),
+        summary=name,
+        start_time=start_time,
+        end_time=end_time,
+        event_type=NovaEvent.EVENT,
+    )
 
     keyboard = [
         [
@@ -288,14 +372,14 @@ async def block_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_message(
         update,
         context,
-        "You have some time at " + time + ". Would you like to work on it then?",
+        "You have some time at "
+        + today_next_available_slot.isoformat()
+        + ". Would you like to work on it then?",
         reply_markup=reply_markup,
     )
 
 
 @update_chat_data_state
 async def block_created(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: create new event on gcal
-    # add_calendar_item
-
+    # note: should create event earlier regardless of whether correct or not
     await block_flow_schedule_updated(update, context)
