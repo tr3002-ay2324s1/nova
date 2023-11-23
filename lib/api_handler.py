@@ -1,5 +1,5 @@
 from typing import List, TypedDict
-from requests import request, post
+from requests import request, post, patch
 from os import getenv
 
 from utils.constants import BASE_URL
@@ -61,3 +61,8 @@ def add_tasks(task: Task):
 def add_habit(habit: Habit):
     url_post = f"{BASE_URL}/"
     post(url_post, json=habit)
+
+
+def plan_tasks(telegram_user_id: str):
+    url_patch = f"{BASE_URL}/tasks/plan/telegram/{telegram_user_id}"
+    patch(url_patch)

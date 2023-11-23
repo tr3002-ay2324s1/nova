@@ -1,18 +1,19 @@
-from datetime import datetime, timedelta
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Update,
 )
 from telegram.ext import ContextTypes, ConversationHandler
-from lib.api_handler import get_user
+from lib.api_handler import get_user, plan_tasks
 from lib.google_cal import (
     get_calendar_events,
     get_google_cal_link,
     get_readable_cal_event_str,
 )
-from utils.constants import DAY_END_TIME, DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
-from utils.datetime_utils import get_day_start_end_datetimes, get_tomorrow_start_end_datetimes
+from utils.datetime_utils import (
+    get_day_start_end_datetimes,
+    get_tomorrow_start_end_datetimes,
+)
 from utils.logger_config import configure_logger
 from utils.utils import (
     send_message,
@@ -220,13 +221,7 @@ async def night_flow_tomorrow_schedule_complete(
         "Time to rest!",
     )
 
-    await send_message(
-        update,
-        context,
-        "Good night!",
-    )
-
-    return ConversationHandler.END
+    await night_flow_end(update, context)
 
 
 @update_chat_data_state
@@ -292,10 +287,22 @@ async def night_flow_tomorrow_schedule_updated(
         "This is how your day tomorrow will look like then!\n\n" + tomorrow_schedule,
     )
 
+    await night_flow_end(update, context)
+
+
+@update_chat_data_state
+async def night_flow_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for event_creation")
+        await send_on_error_message(context)
+        return
+
+    plan_tasks(context.chat_data["chat_id"])
+
     await send_message(
         update,
         context,
-        "Goodnight!",
+        "Good night!",
     )
 
     return ConversationHandler.END
