@@ -166,7 +166,7 @@ async def night_flow_tomorrow_schedule(
     await send_message(
         update,
         context,
-        "Here's your schedule for tomorrow",
+        "Here's your schedule for tomorrow!",
     )
 
     user_id = context.chat_data["chat_id"]

@@ -202,7 +202,7 @@ async def block_next_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
         k=150,
     )
 
-    has_upcoming_block = len(events) == 0
+    has_upcoming_block = len(events) != 0
 
     if has_upcoming_block:
         task = ""

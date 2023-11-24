@@ -36,13 +36,13 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await add_morning_flow(context)
 
-    # await add_once_job(
-    #     callback=block_start_alert,
-    #     when=CURRENT_DATETIME,
-    #     chat_id=int(context.chat_data["chat_id"]),
-    #     context=context,
-    #     data="<task_name>",
-    # )
+    await add_once_job(
+        callback=block_start_alert,
+        when=CURRENT_DATETIME,
+        chat_id=int(context.chat_data["chat_id"]),
+        context=context,
+        data="<task_name>",
+    )
 
     await send_message(
         update,
