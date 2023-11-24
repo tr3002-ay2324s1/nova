@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from typing import Optional
 from telegram.ext import ContextTypes
 from utils.constants import NEW_YORK_TIMEZONE_INFO
@@ -40,7 +40,9 @@ async def add_once_job(
     remove_job_if_exists(job_name, context)
 
     # Explicitly set the time zone to America/New_York
-    when = when.replace(tzinfo=NEW_YORK_TIMEZONE_INFO)
+    # Fix bug: Localize timezone to fix bug of timezone being %Z:56 instead of %Z:00
+    # Fix bug: Add 20 seconds to when to fix bug of instantly added job not being run
+    when = NEW_YORK_TIMEZONE_INFO.localize(when.replace(tzinfo=None)) + timedelta(seconds=20)
 
     if context.job_queue is not None:
         context.job_queue.run_once(

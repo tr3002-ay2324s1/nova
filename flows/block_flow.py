@@ -16,9 +16,8 @@ from lib.google_cal import (
     get_google_cal_link,
     get_readable_cal_event_str,
     merge_events,
-    sort_events,
 )
-from utils.constants import DAY_END_TIME, DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
+from utils.constants import DAY_END_TIME, NEW_YORK_TIMEZONE_INFO
 from utils.datetime_utils import (
     get_current_till_day_end_datetimes,
     get_day_start_end_datetimes,
@@ -165,7 +164,7 @@ async def block_flow_schedule_updated(
 
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
-    timeMin, timeMax = get_day_start_end_datetimes()
+    timeMin, timeMax = get_current_till_day_end_datetimes()
     events = get_calendar_events(
         refresh_token=user.get("google_refresh_token", ""),
         timeMin=timeMin.isoformat(),
@@ -194,7 +193,7 @@ async def block_next_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
-    timeMin, timeMax = get_day_start_end_datetimes()
+    timeMin, timeMax = get_current_till_day_end_datetimes()
     events = get_calendar_events(
         refresh_token=user.get("google_refresh_token", ""),
         timeMin=timeMin.isoformat(),
@@ -205,12 +204,20 @@ async def block_next_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     has_upcoming_block = len(events) != 0
 
     if has_upcoming_block:
-        task = ""
-        time = ""
+        event = events[0]
+        name = event.get("summary")
+        start_time = (
+            datetime.fromisoformat(
+                event.get("start").get(
+                    "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
+                )
+            ).strftime("%H:%M")
+            or ""
+        )
         await send_message(
             update,
             context,
-            "Nice job! Next up you have " + task + " at " + time,
+            "Nice job! Next up you have " + name + " at " + start_time,
         )
     else:
         await night_flow_review(update, context)
@@ -226,8 +233,16 @@ async def block_end_alert(context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error("context.job.name is None for block_start_alert_confirm")
         await send_on_error_message(context)
         return
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for block_start_alert_confirm")
+        await send_on_error_message(context)
+        return
 
     name, time = get_name_time_from_job_name(context.job.name)
+
+    context.chat_data["job"] = dict()
+    context.chat_data["job"]["name"] = name
+    context.chat_data["job"]["time"] = time
 
     keyboard = [
         [
@@ -265,20 +280,35 @@ def find_today_next_available_slot(
     # merge events
     merged_events = merge_events(events)
 
-    if len(merged_events) == 0:
+    if (
+        len(merged_events) == 0
+        and (datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + duration).time() <= DAY_END_TIME
+    ):
         return datetime.now(tz=NEW_YORK_TIMEZONE_INFO).time()
 
-    for i in range(len(merged_events) - 1):
-        start_of_buffer = datetime.fromisoformat(
-            merged_events[i]
-            .get("end")
-            .get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat())
-        )
-        end_of_buffer = datetime.fromisoformat(
-            merged_events[i + 1]
-            .get("start")
-            .get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat())
-        )
+    for i in range(len(merged_events)):
+        if i < len(merged_events) - 1:
+            start_of_buffer = datetime.fromisoformat(
+                merged_events[i]
+                .get("end")
+                .get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat())
+            )
+            end_of_buffer = datetime.fromisoformat(
+                merged_events[i + 1]
+                .get("start")
+                .get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat())
+            )
+        else:
+            start_of_buffer = datetime.fromisoformat(
+                merged_events[i]
+                .get("end")
+                .get("dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat())
+            )
+            end_of_buffer = datetime.combine(
+                datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
+                DAY_END_TIME,
+                tzinfo=NEW_YORK_TIMEZONE_INFO,
+            )
         buffer_duration = end_of_buffer - start_of_buffer
 
         if buffer_duration >= duration:
@@ -293,17 +323,9 @@ async def block_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error("context.chat_data is None for block_update")
         await send_on_error_message(context)
         return
-    if context.job is None:
-        logger.error("context.job is None for block_update")
-        await send_on_error_message(context)
-        return
-    if context.job.name is None:
-        logger.error("context.job.name is None for block_update")
-        await send_on_error_message(context)
-        return
 
-    name, time = get_name_time_from_job_name(context.job.name)
-    duration = context.chat_data["block_update"]["duration"]
+    name = context.chat_data["job"]["name"]
+    duration = context.chat_data["new_block"]["duration"]
 
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
@@ -331,16 +353,19 @@ async def block_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_on_error_message(context)
         return
 
-    start_time = datetime.combine(
-        datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
-        today_next_available_slot,
-        tzinfo=NEW_YORK_TIMEZONE_INFO,
+    start_time = NEW_YORK_TIMEZONE_INFO.localize(
+        datetime.combine(
+            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
+            today_next_available_slot,
+        )
     )
-    end_time = datetime.combine(
-        datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
-        today_next_available_slot,
-        tzinfo=NEW_YORK_TIMEZONE_INFO,
-    ) + timedelta(minutes=int(duration))
+    end_time = NEW_YORK_TIMEZONE_INFO.localize(
+        datetime.combine(
+            datetime.now(tz=NEW_YORK_TIMEZONE_INFO).date(),
+            today_next_available_slot,
+        )
+        + timedelta(minutes=int(duration))
+    )
 
     context.chat_data["new_block"]["start_time"] = start_time.isoformat()
     context.chat_data["new_block"]["end_time"] = end_time.isoformat()
@@ -369,13 +394,7 @@ async def block_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
         update,
         context,
         "You have some time at "
-        + today_next_available_slot.isoformat()
+        + today_next_available_slot.strftime("%H:%M")
         + ". Would you like to work on it then?",
         reply_markup=reply_markup,
     )
-
-
-@update_chat_data_state
-async def block_created(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # note: should create event earlier regardless of whether correct or not
-    await block_flow_schedule_updated(update, context)

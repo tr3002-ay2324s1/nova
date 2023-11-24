@@ -25,7 +25,6 @@ from commands.task_command import (
     task_schedule_updated,
 )
 from flows.block_flow import (
-    block_created,
     block_end_alert_edit,
     block_flow_schedule_edit,
     block_next_alert,
@@ -125,7 +124,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     elif query.data == "block_end_alert_no":
         await block_end_alert_edit(update, context)
     elif query.data == "block_update_yes":
-        await block_created(update, context)
+        await block_flow_schedule_updated(update, context)
     elif query.data == "block_update_no":
         await block_flow_schedule_edit(update, context)
 

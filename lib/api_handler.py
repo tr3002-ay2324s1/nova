@@ -63,6 +63,7 @@ def add_habit(habit: Habit):
     post(url_post, json=habit)
 
 
-def plan_tasks(telegram_user_id: str):
+async def plan_tasks(telegram_user_id: str):
     url_patch = f"{BASE_URL}/tasks/plan/telegram/{telegram_user_id}"
-    patch(url_patch)
+    response = patch(url_patch)
+    await response.json()

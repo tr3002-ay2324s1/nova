@@ -142,7 +142,7 @@ async def night_flow_review_complete(
     await send_message(
         update,
         context,
-        "Good job on takingthe time to reflect about your day!",
+        "Good job on taking the time to reflect about your day!",
     )
 
     await send_message(
@@ -168,6 +168,8 @@ async def night_flow_tomorrow_schedule(
         context,
         "Here's your schedule for tomorrow!",
     )
+
+    await plan_tasks(context.chat_data["chat_id"])
 
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
@@ -296,8 +298,6 @@ async def night_flow_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error("context.chat_data is None for event_creation")
         await send_on_error_message(context)
         return
-
-    plan_tasks(context.chat_data["chat_id"])
 
     await send_message(
         update,
