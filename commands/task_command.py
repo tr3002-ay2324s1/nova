@@ -161,7 +161,7 @@ async def task_schedule_yes_update(update, context):
     context.chat_data["new_task"]["end_time"] = end_time.isoformat()
 
     events_full = get_calendar_events(
-        refresh_token=user.get("google_refresh_token", None),
+        refresh_token=user.get("google_refresh_token", ""),
         timeMin=time_min.isoformat(),
         timeMax=time_max.isoformat(),
         k=150,

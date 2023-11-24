@@ -16,13 +16,18 @@ async def add_block_flows(context: ContextTypes.DEFAULT_TYPE) -> None:
     from lib.api_handler import get_user
     from lib.google_cal import get_calendar_events
     from utils.job_queue import add_once_job
+    from utils.datetime_utils import get_current_till_day_end_datetimes
 
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
 
+    timeMin, timeMax = get_current_till_day_end_datetimes()
+
     events = get_calendar_events(
         refresh_token=user.get("google_refresh_token", ""),
-        k=500,
+        timeMin=timeMin.isoformat(),
+        timeMax=timeMax.isoformat(),
+        k=150,
     )
 
     for event in events:
@@ -32,9 +37,9 @@ async def add_block_flows(context: ContextTypes.DEFAULT_TYPE) -> None:
         start_datetime_str = event.get("start").get("dateTime")
 
         if start_datetime_str is None:
+            # assume whole day event and ignore
             logger.error("start_datetime_str is None for event")
-            await send_on_error_message(context)
-            return
+            continue
 
         start_datetime = datetime.fromisoformat(start_datetime_str)
 

@@ -68,7 +68,7 @@ async def add_daily_job(
     time = time.replace(tzinfo=NEW_YORK_TIMEZONE_INFO)
 
     if context.job_queue is not None:
-        context.job_queue.run_daily(
+        daily_job = context.job_queue.run_daily(
             callback,
             time,
             days=tuple(range(7)),
@@ -78,6 +78,7 @@ async def add_daily_job(
         )
 
         logger.info(f"Daily job {job_name} added for {chat_id} at {time}")
+        logger.info("Next run at " + str(daily_job.next_t))
 
 
 async def clear_cron_jobs(context: ContextTypes.DEFAULT_TYPE):

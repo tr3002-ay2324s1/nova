@@ -4,5 +4,5 @@ def get_name_time_from_job_name(job_name: str):
 
     parts = job_name.split("_")
     name = "_".join(parts[7:])
-    time = parts[4]
+    time = parts[5]
     return name, time

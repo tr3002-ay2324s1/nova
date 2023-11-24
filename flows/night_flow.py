@@ -55,7 +55,7 @@ async def night_flow_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE
     user = get_user(user_id)
     timeMin, timeMax = get_day_start_end_datetimes()
     events = get_calendar_events(
-        refresh_token=user.get("google_refresh_token", None),
+        refresh_token=user.get("google_refresh_token", ""),
         timeMin=timeMin.isoformat(),
         timeMax=timeMax.isoformat(),
         k=150,
@@ -173,7 +173,7 @@ async def night_flow_tomorrow_schedule(
     user = get_user(user_id)
     timeMin, timeMax = get_tomorrow_start_end_datetimes()
     tomorrow_events = get_calendar_events(
-        refresh_token=user.get("google_refresh_token", None),
+        refresh_token=user.get("google_refresh_token", ""),
         timeMin=timeMin.isoformat(),
         timeMax=timeMax.isoformat(),
         k=150,
@@ -272,7 +272,7 @@ async def night_flow_tomorrow_schedule_updated(
     user = get_user(user_id)
     timeMin, timeMax = get_tomorrow_start_end_datetimes()
     tomorrow_events = get_calendar_events(
-        refresh_token=user.get("google_refresh_token", None),
+        refresh_token=user.get("google_refresh_token", ""),
         timeMin=timeMin.isoformat(),
         timeMax=timeMax.isoformat(),
         k=150,

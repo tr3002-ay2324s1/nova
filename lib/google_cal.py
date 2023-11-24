@@ -272,12 +272,11 @@ def get_readable_cal_event_str(events: Sequence[GoogleCalendarEventMinimum]):
                     event.get("summary")
                     + " @ "
                     + datetime.strptime(
-                        event_datetime_str,
-                        "%Y-%m-%dT%H:%M:%S.%f%z",
+                        event_datetime_str, "%Y-%m-%dT%H:%M:%S%z"
                     ).strftime("%H:%M")
                 )
             )
-    return "\n".join(event_summary_strs)
+    return "\n".join(event_summary_strs) or "No upcoming events found."
 
 
 def get_calendar_events(
@@ -286,12 +285,10 @@ def get_calendar_events(
     q: Optional[
         str
     ] = None,  # Query string for calendar name, summary, description, etc.
-    timeMin: Optional[str] = datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat()
-    + "Z",  # 'Z' indicates UTC time
+    timeMin: Optional[str] = datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat(),
     timeMax: Optional[str] = (
         datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(days=30)
-    ).isoformat()
-    + "Z",
+    ).isoformat(),
     k=10,
 ) -> List[
     GoogleCalendarReceivedEvent

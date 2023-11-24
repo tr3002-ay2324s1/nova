@@ -220,6 +220,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # night_flow
     elif state == "night_flow_feeling":
+        context.chat_data["night_flow_review"] = dict()
         context.chat_data["night_flow_review"]["feeling"] = text
         await night_flow_favourite(update, context)
     elif state == "night_flow_favourite":

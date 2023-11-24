@@ -67,6 +67,10 @@ async def block_start_alert(context: ContextTypes.DEFAULT_TYPE) -> None:
 
     name, time = get_name_time_from_job_name(context.job.name)
 
+    context.chat_data["job"] = dict()
+    context.chat_data["job"]["name"] = name
+    context.chat_data["job"]["time"] = time
+
     await send_message(
         None,
         context,
@@ -81,16 +85,8 @@ async def block_start_alert_confirm(update: Update, context: ContextTypes.DEFAUL
         logger.error("context.chat_data is None for block_start_alert_confirm")
         await send_on_error_message(context)
         return
-    if context.job is None:
-        logger.error("context.job is None for block_start_alert_confirm")
-        await send_on_error_message(context)
-        return
-    if context.job.name is None:
-        logger.error("context.job.name is None for block_start_alert_confirm")
-        await send_on_error_message(context)
-        return
 
-    name, time = get_name_time_from_job_name(context.job.name)
+    name = context.chat_data["job"]["name"]
 
     # get block end time
     user_id = context.chat_data["chat_id"]
@@ -171,12 +167,12 @@ async def block_flow_schedule_updated(
     user = get_user(user_id)
     timeMin, timeMax = get_day_start_end_datetimes()
     events = get_calendar_events(
-        refresh_token=user.get("google_refresh_token", None),
+        refresh_token=user.get("google_refresh_token", ""),
         timeMin=timeMin.isoformat(),
         timeMax=timeMax.isoformat(),
         k=150,
     )
-    schedule = get_readable_cal_event_str(events) or "No upcoming events found."
+    schedule = get_readable_cal_event_str(events)
 
     await update_cron_jobs(context)
 
@@ -200,7 +196,7 @@ async def block_next_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = get_user(user_id)
     timeMin, timeMax = get_day_start_end_datetimes()
     events = get_calendar_events(
-        refresh_token=user.get("google_refresh_token", None),
+        refresh_token=user.get("google_refresh_token", ""),
         timeMin=timeMin.isoformat(),
         timeMax=timeMax.isoformat(),
         k=150,
@@ -313,7 +309,7 @@ async def block_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = get_user(user_id)
     timeMin, timeMax = get_current_till_day_end_datetimes()
     events_full = get_calendar_events(
-        refresh_token=user.get("google_refresh_token", None),
+        refresh_token=user.get("google_refresh_token", ""),
         timeMin=timeMin.isoformat(),
         timeMax=timeMax.isoformat(),
         k=150,
