@@ -169,8 +169,6 @@ async def night_flow_tomorrow_schedule(
         "Here's your schedule for tomorrow!",
     )
 
-    await plan_tasks(context.chat_data["chat_id"])
-
     user_id = context.chat_data["chat_id"]
     user = get_user(user_id)
     timeMin, timeMax = get_tomorrow_start_end_datetimes()

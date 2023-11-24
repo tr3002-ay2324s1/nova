@@ -38,12 +38,12 @@ def get_google_oauth_login_url(telegram_user_id: str, username: str):
     return url
 
 
-def get_user(tele_user_id: str):
+def get_user(telegram_user_id: str):
     # Make a HTTP request to BASE_URL/users/telegram/{user_id}
 
     user_res = request(
         method="GET",
-        url=f"{BASE_URL}/users/telegram/" + tele_user_id,
+        url=f"{BASE_URL}/users/telegram/" + telegram_user_id,
         headers={
             "Content-Type": "application/json",
         },
@@ -53,17 +53,18 @@ def get_user(tele_user_id: str):
     return user
 
 
-def add_tasks(task: Task):
+async def add_tasks(task: Task):
     url_post = f"{BASE_URL}/tasks"
-    post(url_post, json=task)
+    response = post(url_post, json=task)
+    return response.json()
 
 
-def add_habit(habit: Habit):
-    url_post = f"{BASE_URL}/"
-    post(url_post, json=habit)
+def mark_task_as_added(task_id: int):
+    url_patch = f"{BASE_URL}/tasks/added/{task_id}"
+    patch(url_patch)
 
 
 async def plan_tasks(telegram_user_id: str):
     url_patch = f"{BASE_URL}/tasks/plan/telegram/{telegram_user_id}"
     response = patch(url_patch)
-    await response.json()
+    return response.json()

@@ -4,7 +4,7 @@ from telegram import (
     Update,
 )
 from telegram.ext import ContextTypes, ConversationHandler
-from lib.api_handler import add_tasks, get_user
+from lib.api_handler import add_tasks, get_user, mark_task_as_added
 from lib.google_cal import (
     GoogleCalendarEventMinimum,
     NovaEvent,
@@ -109,17 +109,18 @@ async def task_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await task_schedule_no_update(update, context)
 
-        add_tasks(
-            {
-                "userId": context.chat_data["chat_id"],
-                "name": context.chat_data["new_task"]["title"] or "New Task",
-                "duration": int(context.chat_data["new_task"]["duration"] or "0"),
-                "deadline": context.chat_data["new_task"]["deadline"] or "",
-            }
-        )
+            await add_tasks(
+                {
+                    "userId": context.chat_data["chat_id"],
+                    "name": context.chat_data["new_task"]["title"] or "New Task",
+                    "duration": int(context.chat_data["new_task"]["duration"] or "0"),
+                    "deadline": context.chat_data["new_task"]["deadline"] or "",
+                }
+            )
     else:
         await task_schedule_no_update(update, context)
-        add_tasks(
+
+        await add_tasks(
             {
                 "userId": context.chat_data["chat_id"],
                 "name": context.chat_data["new_task"]["title"] or "New Task",
@@ -150,8 +151,8 @@ async def task_schedule_yes_update(update, context):
         event_duration_minutes=duration_minutes,
     )
 
-    if not time_slot:
-        logger.error("time_slot is empty for task_schedule_yes_update")
+    if time_slot is None:
+        logger.error("time_slot is None for task_schedule_yes_update")
         await send_on_error_message(context)
         return
 
@@ -296,6 +297,18 @@ async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
         end_time=datetime.fromisoformat(end_time),
         event_type=NovaEvent.TASK,
     )
+
+    response = await add_tasks(
+        {
+            "userId": context.chat_data["chat_id"],
+            "name": context.chat_data["new_task"]["title"] or "New Task",
+            "duration": int(context.chat_data["new_task"]["duration"] or "0"),
+            "deadline": context.chat_data["new_task"]["deadline"] or "",
+        }
+    )
+
+    # mark as added
+    mark_task_as_added(response["data"][0]["id"])
 
     if context.chat_data is not None:
         context.chat_data["new_task"] = dict()

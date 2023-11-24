@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
 from typing_extensions import TypedDict
 from datetime import datetime, timedelta
 from os import getenv
+from dateutil import parser
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -266,14 +267,12 @@ def get_readable_cal_event_str(events: Sequence[GoogleCalendarEventMinimum]):
     event_summary_strs = []
     for event in events:
         if "start" in event and "dateTime" in event.get("start"):
-            event_datetime_str: str = event["start"]["dateTime"]  # type: ignore
+            event_datetime_str: str = event.get("start").get("dateTime") or ""
             event_summary_strs.append(
                 str(
                     event.get("summary")
                     + " @ "
-                    + datetime.strptime(
-                        event_datetime_str, "%Y-%m-%dT%H:%M:%S%z"
-                    ).strftime("%H:%M")
+                    + parser.parse(event_datetime_str).strftime("%H:%M")
                 )
             )
     return "\n".join(event_summary_strs) or "No upcoming events found."
