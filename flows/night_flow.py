@@ -131,7 +131,7 @@ async def night_flow_review_complete(
     improve: str = context.chat_data["night_flow_review"]["improve"] or ""
     comment: str = context.chat_data["night_flow_review"]["comment"] or ""
 
-    # TODO: store review in database
+    # TODO: store review in database - not for MVP though
 
     await send_message(
         update,

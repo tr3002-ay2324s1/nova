@@ -365,6 +365,7 @@ def add_calendar_item(
     start_time: datetime,
     end_time: datetime,
     event_type: NovaEvent,
+    extra_details_dict: Optional[Dict[str, Any]] = None,
 ):
     service = get_google_cal_service(refresh_token)
 
@@ -384,6 +385,7 @@ def add_calendar_item(
         "extendedProperties": {
             "private": {
                 "nova_type": event_type.value,
+                **(extra_details_dict or {}),
             },
             "shared": {},
         },

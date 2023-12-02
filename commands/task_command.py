@@ -290,19 +290,23 @@ async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     start_time: str = context.chat_data["new_task"]["start_time"]
     end_time: str = context.chat_data["new_task"]["end_time"]
 
+    response = await add_tasks(
+        {
+            "userId": context.chat_data["chat_id"],
+            "name": context.chat_data["new_task"]["title"] or "New Task",
+            "duration": int(context.chat_data["new_task"]["duration"] or "0"),
+            "deadline": context.chat_data["new_task"]["deadline"] or "",
+        }
+    )
+
     add_calendar_item(
         refresh_token=user.get("google_refresh_token", ""),
         summary=title,
         start_time=datetime.fromisoformat(start_time),
         end_time=datetime.fromisoformat(end_time),
         event_type=NovaEvent.TASK,
-    )
-
-    response = await add_tasks(
-        {
-            "userId": context.chat_data["chat_id"],
-            "name": context.chat_data["new_task"]["title"] or "New Task",
-            "duration": int(context.chat_data["new_task"]["duration"] or "0"),
+        extra_details_dict={
+            "task_id": response["data"][0]["id"],
             "deadline": context.chat_data["new_task"]["deadline"] or "",
         }
     )
