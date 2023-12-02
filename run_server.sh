@@ -5,4 +5,4 @@
 # Run `doppler login && doppler setup` first to authenticate`
 
 # Run Command
-doppler run --command "uvicorn api:app --reload"
+doppler run --command "uvicorn api.index:app --reload"

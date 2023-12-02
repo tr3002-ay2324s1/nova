@@ -9,17 +9,29 @@ from telegram.ext import (
 )
 import os
 from dotenv import load_dotenv
-from constants import Command
-from error_handlers import error_handler
-from admin_commands import start_command, help_command, cancel_command
-from unknown_response import unknown_command, unknown_text
-from handler import handle_callback_query, handle_text
-from task import add_task
-from view import view_all_tasks, view_schedule
+from commands.admin_commands import cancel_command, help_command, start_command
+from commands.event_command import event_title
+from commands.habit_command import habit_title
+from commands.task_command import task_title
+from handlers.error_handlers import error_handler
+from handlers.handler import handle_callback_query, handle_text
+from utils.unknown_response import unknown_command, unknown_text
+from enum import Enum
 
 load_dotenv()
 
 EXPECT_TEXT = range(1)
+
+
+# make command Enum
+class Command(str, Enum):
+    START = "start"
+    HELP = "help"
+    CANCEL = "cancel"
+    EVENT = "event"
+    TASK = "task"
+    HABIT = "habit"
+
 
 if __name__ == "__main__":
     TOKEN = os.getenv("TOKEN") or ""
@@ -28,10 +40,13 @@ if __name__ == "__main__":
     # Commands
     app.add_handler(CommandHandler(Command.START, start_command))
     app.add_handler(CommandHandler(Command.HELP, help_command))
-    app.add_handler(CommandHandler(Command.ADD, add_task))
-    app.add_handler(CommandHandler(Command.TASKS, view_all_tasks))
-    app.add_handler(CommandHandler(Command.SCHEDULE, view_schedule))
     app.add_handler(CommandHandler(Command.CANCEL, cancel_command))
+
+    app.add_handler(CommandHandler(Command.EVENT, event_title))
+    app.add_handler(CommandHandler(Command.TASK, task_title))
+    app.add_handler(CommandHandler(Command.HABIT, habit_title))
+
+    # Handlers
     app.add_handler(CallbackQueryHandler(handle_callback_query))
 
     conv_handler = ConversationHandler(
@@ -39,7 +54,6 @@ if __name__ == "__main__":
         states={EXPECT_TEXT: [MessageHandler(filters.TEXT, handle_text)]},
         fallbacks=[CommandHandler("cancel", cancel_command)],
     )
-
     app.add_handler(conv_handler)
 
     # Unknown

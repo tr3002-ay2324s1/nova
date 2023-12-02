@@ -1,4 +1,4 @@
-# Brio
+# NOVA
 
 The Smart Habit Tracker.
 
