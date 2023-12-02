@@ -1,7 +1,5 @@
-from typing import List, TypedDict
+from typing import TypedDict
 from requests import request, post, patch
-from os import getenv
-
 from utils.constants import BASE_URL
 
 
@@ -63,6 +61,9 @@ def mark_task_as_added(task_id: int):
     url_patch = f"{BASE_URL}/tasks/added/{task_id}"
     patch(url_patch)
 
+def mark_task_as_not_added(task_id: int):
+    url_patch = f"/tasks/un_added/{task_id}"
+    patch(url_patch)
 
 async def plan_tasks(telegram_user_id: str):
     url_patch = f"{BASE_URL}/tasks/plan/telegram/{telegram_user_id}"

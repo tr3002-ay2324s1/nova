@@ -7,11 +7,12 @@ from telegram import (
 )
 from telegram.ext import ContextTypes, ConversationHandler
 from flows.night_flow import night_flow_review
-from lib.api_handler import get_user
+from lib.api_handler import get_user, mark_task_as_not_added
 from lib.google_cal import (
     GoogleCalendarEventMinimum,
     NovaEvent,
     add_calendar_item,
+    get_block_properties,
     get_calendar_events,
     get_google_cal_link,
     get_readable_cal_event_str,
@@ -98,13 +99,9 @@ async def block_start_alert_confirm(update: Update, context: ContextTypes.DEFAUL
         await send_on_error_message(context)
         return
     block = events[0]
-    nova_type = NovaEvent.TASK # Default to task
-    block_properties = block.get("extendedProperties", dict())
-    if block_properties and block_properties.get("private", dict()).get("nova_type", None):
-        nova_type = NovaEvent(block_properties.get("private", dict()).get("nova_type", None))
+    block_props = get_block_properties(block=block)
+    nova_type = (block_props and block_props.get("nova_type", False)) or NovaEvent.TASK
       
-    nova_type = nova_type or NovaEvent.TASK
-
     if nova_type == NovaEvent.TASK:
       # Only send follow-up if task.
       await add_once_job(
@@ -356,7 +353,24 @@ async def block_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
     today_next_available_slot = find_today_next_available_slot(events, duration)
 
     if today_next_available_slot is None:
-        
+        # Get block details from Google Calendar
+        events = get_calendar_events(
+            refresh_token=user.get("google_refresh_token", ""), q=name, k=1
+        )
+        if len(events) != 1:
+            logger.error("Failed to find block")
+            await send_on_error_message(context)
+            return
+        block = events[0]
+        block_props = get_block_properties(block=block)
+        nova_type = (block_props and block_props.get("nova_type", False)) or NovaEvent.TASK
+        if nova_type == NovaEvent.TASK and block_props:
+          # Update DB with new block details
+          task_id = int(block_props.get("task_id", "0"))
+          deadline: str = block_props.get("deadline", "")
+
+          mark_task_as_not_added(task_id=task_id)
+            
         return
 
     start_time = NEW_YORK_TIMEZONE_INFO.localize(

@@ -589,3 +589,21 @@ def find_next_available_time_slot(
 
     # If no slot is found, return None
     return None
+
+def get_block_properties(*, block: GoogleCalendarReceivedEvent):
+    nova_type = NovaEvent.TASK # Default to task
+    block_properties = block.get("extendedProperties", dict())
+    block_priv_properties = dict()
+    if block_properties and block_properties.get("private", dict()).get("nova_type", None):
+        block_priv_properties = block_properties.get("private", dict())
+        nova_type = NovaEvent(block_priv_properties.get("nova_type", None))
+    
+    if nova_type == NovaEvent.TASK:
+        return {
+            "type": nova_type,
+            "start": block.get("start", dict()).get("dateTime", None),
+            "end": block.get("end", dict()).get("dateTime", None),
+            "summary": block.get("summary", None),
+            "id": block.get("id", None),
+            **(block_priv_properties),
+        }
