@@ -306,8 +306,10 @@ def get_calendar_events(
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-
+            try:
+              creds.refresh(Request())
+            except Exception as e:
+              print(e)
     service = build("calendar", "v3", credentials=creds)
 
     # Call the Calendar API
