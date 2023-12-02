@@ -98,20 +98,28 @@ async def block_start_alert_confirm(update: Update, context: ContextTypes.DEFAUL
         await send_on_error_message(context)
         return
     block = events[0]
+    nova_type = NovaEvent.TASK # Default to task
+    block_properties = block.get("extendedProperties", dict())
+    if block_properties and block_properties.get("private", dict()).get("nova_type", None):
+        nova_type = NovaEvent(block_properties.get("private", dict()).get("nova_type", None))
+      
+    nova_type = nova_type or NovaEvent.TASK
 
-    await add_once_job(
-        callback=block_end_alert,
-        when=(
-            datetime.fromisoformat(
-                block.get("end").get(
-                    "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
-                )
-            )
-        ),
-        chat_id=context.chat_data["chat_id"],
-        context=context,
-        data=name,
-    )
+    if nova_type == NovaEvent.TASK:
+      # Only send follow-up if task.
+      await add_once_job(
+          callback=block_end_alert,
+          when=(
+              datetime.fromisoformat(
+                  block.get("end").get(
+                      "dateTime", datetime.now(tz=NEW_YORK_TIMEZONE_INFO)
+                  )
+              )
+          ),
+          chat_id=context.chat_data["chat_id"],
+          context=context,
+          data=name,
+      )
 
     await send_message(
         update,
@@ -347,10 +355,8 @@ async def block_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     today_next_available_slot = find_today_next_available_slot(events, duration)
 
-    # TODO: figure out what to do is today_next_available_slot is None
     if today_next_available_slot is None:
-        logger.info("today_next_available_slot is None for block_update")
-        await send_on_error_message(context)
+        
         return
 
     start_time = NEW_YORK_TIMEZONE_INFO.localize(
