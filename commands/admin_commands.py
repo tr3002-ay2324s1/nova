@@ -136,3 +136,33 @@ async def schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update_cron_jobs(context)
 
     return ConversationHandler.END
+
+
+@update_chat_data_state
+async def refresh_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for refresh_command")
+        await send_on_error_message(context)
+        return
+
+    user_id = context.chat_data["chat_id"]
+    user = get_user(user_id)
+
+    time_min, time_max = get_current_till_day_end_datetimes()
+    events = get_calendar_events(
+        refresh_token=user.get("google_refresh_token", ""),
+        timeMin=time_min.isoformat(),
+        timeMax=time_max.isoformat(),
+        k=150,
+    )
+
+    await send_message(
+        update,
+        context,
+        "Refreshed!",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+    await update_cron_jobs(context)
+
+    return ConversationHandler.END

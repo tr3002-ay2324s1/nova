@@ -9,7 +9,7 @@ from telegram.ext import (
 )
 import os
 from dotenv import load_dotenv
-from commands.admin_commands import cancel_command, help_command, schedule_command, start_command
+from commands.admin_commands import cancel_command, help_command, refresh_command, schedule_command, start_command
 from commands.event_command import event_title
 from commands.habit_command import habit_title
 from commands.task_command import task_title
@@ -32,6 +32,7 @@ class Command(str, Enum):
     TASK = "task"
     HABIT = "habit"
     SCHEDULE = "schedule"
+    REFRESH = "refresh"
 
 
 if __name__ == "__main__":
@@ -48,6 +49,7 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler(Command.HABIT, habit_title))
 
     app.add_handler(CommandHandler(Command.SCHEDULE, schedule_command))
+    app.add_handler(CommandHandler(Command.REFRESH, refresh_command))
 
     # Handlers
     app.add_handler(CallbackQueryHandler(handle_callback_query))
