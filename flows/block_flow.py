@@ -74,7 +74,7 @@ async def block_start_alert(context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_message(
         None,
         context,
-        "It's almost " + time[:2] + ":" + time[-2:] + ". Time to work on " + name,
+        "It's almost " + time[:2] + ":" + time[-2:] + ". It's time for " + name,
         reply_markup=reply_markup,
     )
 
