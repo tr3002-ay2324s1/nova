@@ -22,7 +22,6 @@ from commands.task_command import (
     task_deadline,
     task_duration,
     task_schedule_edit,
-    task_schedule_updated,
 )
 from flows.block_flow import (
     block_end_alert_edit,
@@ -94,7 +93,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
     elif query.data == "task_creation_edit":
         await task_schedule_edit(update, context)
     elif query.data == "task_schedule_edit_yes":
-        await task_schedule_updated(update, context)
+        await task_command_end(update, context)
 
     # habit_command
     elif query.data == "habit_creation_confirm":

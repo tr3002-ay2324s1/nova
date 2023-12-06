@@ -162,6 +162,8 @@ async def night_flow_tomorrow_schedule(
         logger.error("context.chat_data is None for event_creation")
         await send_on_error_message(context)
         return
+    
+    await plan_tasks(context.chat_data["chat_id"])
 
     await send_message(
         update,

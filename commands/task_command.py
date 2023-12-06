@@ -141,7 +141,7 @@ async def task_schedule_yes_update(update, context):
     user = get_user(user_id)
     time_min, time_max = get_current_till_midnight_datetimes()
     title: str = context.chat_data["new_task"]["title"]
-    deadline: str = context.chat_data["new_task"]["deadline"]
+    deadline: str = context.chat_data["new_task"]["deadline"] or ""
     duration: str = context.chat_data["new_task"]["duration"] or "0"
     duration_minutes = int(duration)
     time_slot = find_next_available_time_slot(
@@ -158,40 +158,37 @@ async def task_schedule_yes_update(update, context):
 
     start_time, end_time = time_slot
 
-    context.chat_data["new_task"]["start_time"] = start_time.isoformat()
-    context.chat_data["new_task"]["end_time"] = end_time.isoformat()
+    response = await add_tasks(
+        {
+            "userId": user_id,
+            "name": title or "New Task",
+            "duration": int(duration),
+            "deadline": deadline,
+        }
+    )
 
-    events_full = get_calendar_events(
+    add_calendar_item(
+        refresh_token=user.get("google_refresh_token", ""),
+        summary=title,
+        start_time=start_time,
+        end_time=end_time,
+        event_type=NovaEvent.TASK,
+        extra_details_dict={
+            "task_id": response["data"][0]["id"],
+            "deadline": context.chat_data["new_task"]["deadline"] or "",
+        },
+    )
+    
+    # mark as added
+    mark_task_as_added(response["data"][0]["id"])
+
+    events = get_calendar_events(
         refresh_token=user.get("google_refresh_token", ""),
         timeMin=time_min.isoformat(),
         timeMax=time_max.isoformat(),
         k=150,
     )
-    events = [
-        GoogleCalendarEventMinimum(
-            start=event["start"],
-            end=event["end"],
-            summary=event["summary"],
-        )
-        for event in events_full
-    ]
-    events.extend(
-        [
-            {
-                "start": {
-                    "dateTime": start_time.isoformat(),
-                    "timeZone": "America/New_York",
-                    "date": None,
-                },
-                "end": {
-                    "dateTime": end_time.isoformat(),
-                    "timeZone": "America/New_York",
-                    "date": None,
-                },
-                "summary": title,
-            }
-        ]
-    )
+    
     cal_schedule_events_str = get_readable_cal_event_str(events)
 
     keyboard = [
@@ -266,53 +263,13 @@ async def task_schedule_edit(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 @update_chat_data_state
-async def task_schedule_updated(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update_cron_jobs(context)
-
-    await send_message(
-        update,
-        context,
-        "Great!",
-    )
-
-    return ConversationHandler.END
-
-
-@update_chat_data_state
 async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.chat_data is None:
         logger.error("context.chat_data is None for task_creation")
         await send_on_error_message(context)
         return
-    user_id = context.chat_data["chat_id"]
-    user = get_user(user_id)
-    title: str = context.chat_data["new_task"]["title"]
-    start_time: str = context.chat_data["new_task"]["start_time"]
-    end_time: str = context.chat_data["new_task"]["end_time"]
-
-    response = await add_tasks(
-        {
-            "userId": context.chat_data["chat_id"],
-            "name": context.chat_data["new_task"]["title"] or "New Task",
-            "duration": int(context.chat_data["new_task"]["duration"] or "0"),
-            "deadline": context.chat_data["new_task"]["deadline"] or "",
-        }
-    )
-
-    add_calendar_item(
-        refresh_token=user.get("google_refresh_token", ""),
-        summary=title,
-        start_time=datetime.fromisoformat(start_time),
-        end_time=datetime.fromisoformat(end_time),
-        event_type=NovaEvent.TASK,
-        extra_details_dict={
-            "task_id": response["data"][0]["id"],
-            "deadline": context.chat_data["new_task"]["deadline"] or "",
-        }
-    )
-
-    # mark as added
-    mark_task_as_added(response["data"][0]["id"])
+    
+    await update_cron_jobs(context)
 
     if context.chat_data is not None:
         context.chat_data["new_task"] = dict()
