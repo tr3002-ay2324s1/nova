@@ -8,10 +8,13 @@ from telegram import (
 from telegram.ext import ContextTypes, ConversationHandler
 from flows.block_flow import block_start_alert
 from lib.api_handler import get_google_oauth_login_url, get_user
+from lib.google_cal import get_calendar_events, get_readable_cal_event_str
 from utils.add_morning_flow import add_morning_flow
 from utils.constants import CURRENT_DATETIME
+from utils.datetime_utils import get_current_till_day_end_datetimes
 from utils.job_queue import add_once_job
 from utils.logger_config import configure_logger
+from utils.update_cron_jobs import update_cron_jobs
 from utils.utils import send_message, send_on_error_message, update_chat_data_state
 
 logger = configure_logger()
@@ -100,5 +103,36 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         "Bye! I hope we can talk again some day.",
         reply_markup=ReplyKeyboardRemove(),
     )
+
+    return ConversationHandler.END
+
+
+@update_chat_data_state
+async def schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.chat_data is None:
+        logger.error("context.chat_data is None for schedule_command")
+        await send_on_error_message(context)
+        return
+
+    user_id = context.chat_data["chat_id"]
+    user = get_user(user_id)
+
+    time_min, time_max = get_current_till_day_end_datetimes()
+    events = get_calendar_events(
+        refresh_token=user.get("google_refresh_token", ""),
+        timeMin=time_min.isoformat(),
+        timeMax=time_max.isoformat(),
+        k=150,
+    )
+    cal_schedule_events_str = get_readable_cal_event_str(events)
+
+    await send_message(
+        update,
+        context,
+        "Here's your schedule for the rest of the day: \n\n" + cal_schedule_events_str,
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+    await update_cron_jobs(context)
 
     return ConversationHandler.END
