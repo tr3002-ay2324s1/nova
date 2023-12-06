@@ -271,8 +271,7 @@ async def task_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update_cron_jobs(context)
 
-    if context.chat_data is not None:
-        context.chat_data["new_task"] = dict()
+    context.chat_data["new_task"] = dict()
 
     await send_message(
         update,
