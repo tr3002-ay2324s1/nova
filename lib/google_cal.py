@@ -265,7 +265,9 @@ def get_google_cal_link(telegram_user_id: Optional[int]):
 
 def get_readable_cal_event_str(events: Sequence[GoogleCalendarEventMinimum]):
     event_summary_strs = []
-    for event in events:
+    # Sort in chronological order
+    sorted_events = sort_events(events)
+    for event in sorted_events:
         if "start" in event and "dateTime" in event.get("start"):
             event_datetime_str: str = event.get("start").get("dateTime") or ""
             event_summary_strs.append(
