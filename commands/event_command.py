@@ -5,8 +5,9 @@ from telegram import (
 )
 from telegram.ext import ContextTypes, ConversationHandler
 from lib.api_handler import get_user
-from lib.google_cal import NovaEvent, add_calendar_item
+from lib.google_cal import NovaEvent, add_calendar_item, get_calendar_events, get_google_cal_link, get_readable_cal_event_str
 from utils.constants import NEW_YORK_TIMEZONE_INFO
+from utils.datetime_utils import get_day_start_end_datetimes
 from utils.logger_config import configure_logger
 from utils.utils import send_message, send_on_error_message, update_chat_data_state
 from dotenv import load_dotenv
@@ -68,37 +69,68 @@ async def event_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     title: str = context.chat_data["new_event"]["title"] or ""
     date: str = context.chat_data["new_event"]["date"] or ""
-    start_time: str = context.chat_data["new_event"]["start_time"] or ""
-    end_time: str = context.chat_data["new_event"]["end_time"] or ""
+    start_time_str: str = context.chat_data["new_event"]["start_time"] or ""
+    end_time_str: str = context.chat_data["new_event"]["end_time"] or ""
 
-    if title == "" or date == "" or start_time == "" or end_time == "":
+    if title == "" or date == "" or start_time_str == "" or end_time_str == "":
         logger.error("title or date or start_time or end_time is empty for handle_text")
         await send_on_error_message(context)
         return
+
+    start_time = datetime.strptime(
+        str(datetime.now(tz=NEW_YORK_TIMEZONE_INFO).year) + date + start_time_str,
+        "%Y%m%d%H%M",
+    )
+
+    # Convert to datetime object from date and end_time_str
+    end_time = datetime.strptime(
+        str(datetime.now(tz=NEW_YORK_TIMEZONE_INFO).year) + date + end_time_str,
+        "%Y%m%d%H%M",
+    )
+
+    user = get_user(context.chat_data["chat_id"])
+
+    add_calendar_item(
+        refresh_token=user.get("google_refresh_token", ""),
+        summary=title,
+        start_time=start_time,
+        end_time=end_time,
+        event_type=NovaEvent.EVENT,
+    )
+
+    # Send new schedule
+    timeMin, timeMax = get_day_start_end_datetimes()
+    new_events = get_calendar_events(
+        refresh_token=user.get("google_refresh_token", ""),
+        timeMin=datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat(),
+        timeMax=timeMax.isoformat(),
+        k=150,
+    )
+    cal_events = get_readable_cal_event_str(events=new_events)
+
+    await send_message(
+        update,
+        context,
+        "Great! Here's your updated schedule for today:"
+        + "\n\n"
+        + cal_events,
+    )
+
+    cal_url = get_google_cal_link(context.chat_data["chat_id"])
 
     keyboard = [
         [
             InlineKeyboardButton("Looks Good!", callback_data="event_creation_confirm"),
         ],
         [
-            InlineKeyboardButton("Cancel", callback_data="event_creation_cancel"),
+            InlineKeyboardButton("Edit", url=cal_url),
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-
     await send_message(
         update,
         context,
-        'Got it! I have created an event for "'
-        + title
-        + '" on '
-        + date[:2]
-        + "/"
-        + date[-2:]
-        + " from "
-        + start_time
-        + " to "
-        + end_time,
+        "Is this okay?",
         reply_markup=reply_markup,
     )
 
@@ -110,49 +142,51 @@ async def event_command_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_on_error_message(context)
         return
 
-    title: str = (
-        context.chat_data["new_event"]["title"] if context.chat_data is not None else ""
-    )
-    date_str: str = (
-        context.chat_data["new_event"]["date"] if context.chat_data is not None else ""
-    )  # MMDD format
+    # title: str = (
+    #     context.chat_data["new_event"]["title"] if context.chat_data is not None else ""
+    # )
+    # date_str: str = (
+    #     context.chat_data["new_event"]["date"] if context.chat_data is not None else ""
+    # )  # MMDD format
 
-    start_time_str: str = (
-        context.chat_data["new_event"]["start_time"]
-        if context.chat_data is not None
-        else ""
-    )  # HHMM format
+    # start_time_str: str = (
+    #     context.chat_data["new_event"]["start_time"]
+    #     if context.chat_data is not None
+    #     else ""
+    # )  # HHMM format
 
-    start_time = datetime.strptime(
-        str(datetime.now(tz=NEW_YORK_TIMEZONE_INFO).year) + date_str + start_time_str,
-        "%Y%m%d%H%M",
-    )
+    # start_time = datetime.strptime(
+    #     str(datetime.now(tz=NEW_YORK_TIMEZONE_INFO).year) + date_str + start_time_str,
+    #     "%Y%m%d%H%M",
+    # )
 
-    end_time_str: str = (
-        context.chat_data["new_event"]["end_time"]
-        if context.chat_data is not None
-        else ""
-    )
+    # end_time_str: str = (
+    #     context.chat_data["new_event"]["end_time"]
+    #     if context.chat_data is not None
+    #     else ""
+    # )
 
-    # Convert to datetime object from date and end_time_str
-    end_time = datetime.strptime(
-        str(datetime.now(tz=NEW_YORK_TIMEZONE_INFO).year) + date_str + end_time_str,
-        "%Y%m%d%H%M",
-    )
+    # # Convert to datetime object from date and end_time_str
+    # end_time = datetime.strptime(
+    #     str(datetime.now(tz=NEW_YORK_TIMEZONE_INFO).year) + date_str + end_time_str,
+    #     "%Y%m%d%H%M",
+    # )
 
-    if title == "" or date_str == "" or start_time_str == "" or end_time_str == "":
-        logger.error("title or date or start_time or end_time is empty for handle_text")
-        await send_on_error_message(context)
-        return
-    user = get_user(context.chat_data["chat_id"])
+    # if title == "" or date_str == "" or start_time_str == "" or end_time_str == "":
+    #     logger.error("title or date or start_time or end_time is empty for handle_text")
+    #     await send_on_error_message(context)
+    #     return
+    # user = get_user(context.chat_data["chat_id"])
 
-    add_calendar_item(
-        refresh_token=user.get("google_refresh_token", ""),
-        summary=title,
-        start_time=start_time,
-        end_time=end_time,
-        event_type=NovaEvent.EVENT,
-    )
+    # add_calendar_item(
+    #     refresh_token=user.get("google_refresh_token", ""),
+    #     summary=title,
+    #     start_time=start_time,
+    #     end_time=end_time,
+    #     event_type=NovaEvent.EVENT,
+    # )
+
+    # Do nothing here basically cause user is ok with this
 
     await send_message(
         update,
