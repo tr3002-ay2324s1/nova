@@ -7,7 +7,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from lib.api_handler import get_user
 from lib.google_cal import NovaEvent, add_calendar_item, get_calendar_events, get_google_cal_link, get_readable_cal_event_str
 from utils.constants import NEW_YORK_TIMEZONE_INFO
-from utils.datetime_utils import get_day_start_end_datetimes
+from utils.datetime_utils import get_day_start_end_datetimes, get_input_day_start_end_datetimes
 from utils.logger_config import configure_logger
 from utils.utils import send_message, send_on_error_message, update_chat_data_state
 from dotenv import load_dotenv
@@ -89,50 +89,58 @@ async def event_creation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     user = get_user(context.chat_data["chat_id"])
+    google_refresh_token = user.get("google_refresh_token", "") 
 
     add_calendar_item(
-        refresh_token=user.get("google_refresh_token", ""),
+        refresh_token=google_refresh_token,
         summary=title,
         start_time=start_time,
         end_time=end_time,
         event_type=NovaEvent.EVENT,
     )
 
-    # Send new schedule
-    timeMin, timeMax = get_day_start_end_datetimes()
-    new_events = get_calendar_events(
-        refresh_token=user.get("google_refresh_token", ""),
-        timeMin=datetime.now(tz=NEW_YORK_TIMEZONE_INFO).isoformat(),
-        timeMax=timeMax.isoformat(),
-        k=150,
-    )
-    cal_events = get_readable_cal_event_str(events=new_events)
+    # check if this new event clashes with some other event
+    time_min = start_time
+    time_max = end_time
 
-    await send_message(
-        update,
-        context,
-        "Great! Here's your updated schedule for today:"
-        + "\n\n"
-        + cal_events,
+    events_in_same_time_period = get_calendar_events(
+        refresh_token=google_refresh_token,
+        timeMin=time_min.isoformat(),
+        timeMax=time_max.isoformat(),
     )
 
-    cal_url = get_google_cal_link(context.chat_data["chat_id"])
+    if len(events_in_same_time_period) > 0:
+        # Clash flow
+        cal_url = get_google_cal_link(context.chat_data["chat_id"])
 
-    keyboard = [
-        [
-            InlineKeyboardButton("Looks Good!", callback_data="event_creation_confirm"),
-        ],
-        [
-            InlineKeyboardButton("Edit", url=cal_url),
-        ],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await send_message(
-        update,
-        context,
-        "Is this okay?",
-        reply_markup=reply_markup,
-    )
+        keyboard = [
+            [
+                InlineKeyboardButton("Yes, take me to my calendar", url=cal_url),
+                InlineKeyboardButton("No", callback_data="event_creation_confirm"),
+            ],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await send_message(
+            update,
+            context,
+            f"""Added! But there is a clash with an event that is already in your calendar. Would you like to de-conflict?""",
+            reply_markup=reply_markup,
+        )
+
+    else:
+        # No clash flow
+        keyboard = [
+            [
+                InlineKeyboardButton("Looks Good!", callback_data="event_creation_confirm"),
+            ],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await send_message(
+            update,
+            context,
+            f"""Got it! I have created an event for "{title}" on {start_time.strftime("%A, %B %d, %Y")} from {start_time.strftime("%I:%M %p")} to {end_time.strftime("%I:%M %p")}""",
+            reply_markup=reply_markup,
+        )
 
 
 @update_chat_data_state
