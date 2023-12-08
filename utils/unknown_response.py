@@ -22,11 +22,16 @@ async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @update_chat_data_state
 async def unknown_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message is not None and update.message.text is not None:
-        # Pick quote from array READYMADE_RESPONSES
-        rand_idx = randint(0, len(READYMADE_RESPONSES) - 1)
-        quote = READYMADE_RESPONSES[rand_idx]
         await send_message(
             update,
             context,
-            "Hey! " + quote,
+            "Sorry, I don't understand that. Please use /start to start again.",
         )
+        # # Pick quote from array READYMADE_RESPONSES
+        # rand_idx = randint(0, len(READYMADE_RESPONSES) - 1)
+        # quote = READYMADE_RESPONSES[rand_idx]
+        # await send_message(
+        #     update,
+        #     context,
+        #     "Hey! " + quote,
+        # )
