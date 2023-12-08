@@ -1,7 +1,21 @@
-from datetime import datetime, timedelta
+from datetime import _Date, datetime, timedelta
 from typing import List, Tuple
 
 from utils.constants import DAY_END_TIME, DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
+
+def get_input_day_start_end_datetimes(day: datetime) -> Tuple[datetime, datetime]:
+    today_date = day.date()
+    day_start = datetime.combine(
+        today_date,
+        DAY_START_TIME,
+        tzinfo=NEW_YORK_TIMEZONE_INFO,
+    )
+    day_end = datetime.combine(
+        today_date,
+        DAY_END_TIME,
+        tzinfo=NEW_YORK_TIMEZONE_INFO,
+    )
+    return day_start, day_end
 
 
 def get_day_start_end_datetimes() -> Tuple[datetime, datetime]:
