@@ -1,4 +1,4 @@
-from datetime import _Date, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import List, Tuple
 
 from utils.constants import DAY_END_TIME, DAY_START_TIME, NEW_YORK_TIMEZONE_INFO
