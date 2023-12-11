@@ -1,16 +1,18 @@
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 import os
 import html
 import json
 import traceback
+from lib.api_handler import get_google_oauth_login_url
 from utils.logger_config import configure_logger
+from utils.utils import send_message
 
 logger = configure_logger()
 
 
-async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def error_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Log the error and send a telegram message to notify the developer."""
     # Log the error before we do anything else, so we can see it even if something breaks.
     logger.error("Exception while handling an update:", exc_info=context.error)
@@ -18,7 +20,38 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     # traceback.format_exception returns the usual python message about an exception, but as a
     # list of strings rather than a single string, so we have to join them together.
     if context.error is not None:
-        tb_list = traceback.format_exception(
+        if len(context.error.args) > 1 and "error" in context.error.args[1] and context.error.args[1]["error"] == "invalid_grant":
+            user_id = context.chat_data.get("chat_id", "") if context.chat_data else ""
+            username = (update.message and update.message.from_user and update.message.from_user.username) or "user"
+            url = get_google_oauth_login_url(
+                telegram_user_id=user_id,
+                username=username,
+            )
+
+            await send_message(
+                update,
+                context,
+                "You'll need to login to Google Calendar again!",
+            )
+
+            keyboard = [
+                [
+                    InlineKeyboardButton(
+                        "Click me!", url=url
+                    ),
+                ],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            await send_message(
+                update,
+                context,
+                "Login to Google Calendar to get started!",
+                reply_markup=reply_markup,
+            )
+            return
+            
+        tb_list: list[str] = traceback.format_exception(
             None, context.error, context.error.__traceback__
         )
         tb_string = "".join(tb_list)

@@ -7,6 +7,7 @@ from dateutil import parser
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from lib.api_handler import get_google_oauth_login_url
 from utils.constants import (
     DAY_END_TIME,
     DAY_START_TIME,
@@ -279,7 +280,6 @@ def get_readable_cal_event_str(events: Sequence[GoogleCalendarEventMinimum]):
             )
     return "\n".join(event_summary_strs) or "No upcoming events found."
 
-
 def get_calendar_events(
     *,
     refresh_token,
@@ -311,7 +311,8 @@ def get_calendar_events(
             try:
               creds.refresh(Request())
             except Exception as e:
-              print(e)
+              reason, err = e.args
+                  
     service = build("calendar", "v3", credentials=creds)
 
     # Call the Calendar API
