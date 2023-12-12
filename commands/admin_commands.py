@@ -10,6 +10,7 @@ from flows.block_flow import block_start_alert
 from lib.api_handler import get_google_oauth_login_url, get_user
 from lib.google_cal import get_calendar_events, get_readable_cal_event_str
 from utils.add_morning_flow import add_morning_flow
+from utils.add_night_flow import add_night_flow
 from utils.constants import CURRENT_DATETIME
 from utils.datetime_utils import get_current_till_day_end_datetimes
 from utils.job_queue import add_once_job
@@ -38,6 +39,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.chat_data["chat_id"] = str(update.message.chat_id)
 
     await add_morning_flow(context)
+    await add_night_flow(context)
 
     # await add_once_job(
     #     callback=block_start_alert,

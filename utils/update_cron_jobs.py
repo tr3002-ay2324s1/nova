@@ -1,4 +1,5 @@
 from telegram.ext import ContextTypes
+from utils.add_night_flow import add_night_flow
 from utils.logger_config import configure_logger
 from utils.utils import send_on_error_message
 
@@ -18,5 +19,7 @@ async def update_cron_jobs(context: ContextTypes.DEFAULT_TYPE) -> None:
     await clear_cron_jobs(context)
 
     await add_morning_flow(context)
+
+    await add_night_flow(context)
 
     await add_block_flows(context)

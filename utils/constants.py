@@ -8,6 +8,7 @@ DAY_START_TIME = time(hour=8, minute=0, second=0, tzinfo=NEW_YORK_TIMEZONE_INFO)
 # get_day_start_time = lambda: (datetime.now() + timedelta(hours=2, minutes=0, seconds=20)).time()
 # DAY_START_TIME = get_day_start_time()
 DAY_END_TIME = time(hour=19, minute=0, second=0, tzinfo=NEW_YORK_TIMEZONE_INFO)
+NIGHT_FLOW_TIME = time(hour=20, minute=0, second=0, tzinfo=NEW_YORK_TIMEZONE_INFO)
 get_current_datetime = lambda: datetime.now(tz=NEW_YORK_TIMEZONE_INFO) + timedelta(hours=0, minutes=0, seconds=20)
 CURRENT_DATETIME = get_current_datetime()
 GOOGLE_CAL_BASE_URL = "https://calendar.google.com/calendar/u/0/r"
