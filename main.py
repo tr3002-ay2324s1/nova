@@ -37,6 +37,7 @@ class Command(str, Enum):
 
 if __name__ == "__main__":
     TOKEN = os.getenv("TOKEN") or ""
+    # TOKEN = os.getenv("STAGING_TOKEN") or ""
     app = Application.builder().token(TOKEN).build()
 
     # Commands
